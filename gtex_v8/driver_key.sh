@@ -48,11 +48,6 @@ bivariate_cafeh_output_dir=$output_root"bivariate_cafeh_output/"
 
 
 
-
-
-
-
-
 if false; then
 sh process_gtex_associations_for_cafeh.sh $processed_gtex_associations_dir $gene_info_file $liftover_directory
 fi
@@ -64,8 +59,6 @@ if false; then
 sh process_data_for_bivariate_cafeh_analysis.sh $trait_name $trait_sumstat_file $gtex_tissue_file $gtex_cafeh_data $processed_gtex_associations_dir $processed_bivariate_cafeh_input_dir $sample_size
 fi
 
-
-
 if false; then
 sh run_cafeh_on_bivariate_data_for_single_trait_shell.sh $trait_name $gtex_tissue_file $processed_bivariate_cafeh_input_dir $bivariate_cafeh_output_dir
 fi
@@ -74,3 +67,84 @@ fi
 
 
 
+
+
+
+
+
+
+
+
+
+
+# CURRENTLY HACKY, switching over to o2
+
+##################
+# Input data
+##################
+# UKBB download data
+ukbb_download_data="/n/groups/price/UKBiobank/download_500K/"
+# UKBB sumstats
+ukbb_sumstats_dir="/n/groups/price/UKBiobank/sumstats/bolt_337K_unrelStringentBrit_MAF0.001_v3/"
+# Beta files
+cafeh_prs_betas_dir="/n/groups/price/ben/eqtl_informed_prs/input_data/"
+# UKBB Phenotype files
+ukbb_pheno_file1="/n/groups/price/steven/RareVariants/Final/UKB_new_sumstats/UKB_v3.061518.tab"
+ukbb_pheno_file2="/n/groups/price/UKBiobank/app19808mosaic/bloodQC/ukb4777.blood_v2.covars.tab"
+ukbb_pheno_file3="/n/groups/price/UKBiobank/app10438assoc/ukb4777.processed_and_post.plinkPCs.tab.gz"
+
+
+
+##################
+# Output data
+##################
+# Root output directory
+output_root="/n/groups/price/ben/eqtl_informed_prs/"
+# Directory containing filtered UKBB sample names
+ukbb_sample_names_dir=$output_root"ukbb_sample_names/"
+# Directory containing generate PRS
+ukbb_prs_dir=$output_root"ukbb_prs/"
+ukbb_prs_dir=$output_root"ukbb_prs/old/"
+# Directory containing generate PRS
+ukbb_prs_viz_dir=$output_root"visualize_ukbb_prs/"
+
+
+if false; then
+sh generate_ukbb_sample_name_lists.sh $ukbb_download_data $ukbb_sample_names_dir
+fi
+
+if false; then
+for chrom_num in $(seq 2 22); do
+	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num
+done
+fi
+
+if false; then
+sh organize_prs_results.sh $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3
+fi
+
+if false; then
+module load R/3.5.1
+Rscript visualize_prs_results.R $ukbb_prs_dir $ukbb_prs_viz_dir
+fi
+
+
+
+
+
+
+
+
+
+
+
+#################
+#### OLD
+##################
+# Directory containing processed UKBB genotype data
+processed_ukbb_genotype_dir=$output_root"processed_ukbb_genotype/"
+
+
+if false; then
+sh process_ukbb_genotype_data.sh $ukbb_sample_names_dir $ukbb_download_data $ukbb_sumstats_dir $processed_ukbb_genotype_dir
+fi

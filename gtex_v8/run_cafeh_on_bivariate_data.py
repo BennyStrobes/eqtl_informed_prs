@@ -104,7 +104,24 @@ def get_cafeh_predicted_snp_effects_from_colocalizing_components(snp_names, colo
 			snp_predicted_effects.append(0.0)
 	return np.asarray(snp_predicted_effects)
 
-def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait_name, tissue_name):
+def print_snp_predicted_effects_for_a_gene(snp_names, snp_predicted_effects, snp_predicted_effects_file):
+	if len(snp_names) != len(snp_predicted_effects):
+		print('assumption erororo')
+		pdb.set_trace()
+	if len(snp_names) != len(np.unique(snp_names)):
+		print('overwhelming errororor')
+
+	snp_predicted_effects_str = snp_predicted_effects.astype(str)
+
+	t = open(snp_predicted_effects_file,'w')
+	t.write('snp_id\tcafeh_predicted_effects\n')
+
+	for snp_index, snp_name in enumerate(snp_names):
+		snp_predicted_effect = snp_predicted_effects_str[snp_index]
+		t.write(snp_name + '\t' + snp_predicted_effect + '\n')
+	t.close()
+
+def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait_name, tissue_name, output_stem):
 	# Load in pickled cafeh input data
 	g_df = pd.read_pickle(genotype_file)
 	z_df = pd.read_pickle(zscore_file)
@@ -138,28 +155,71 @@ def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait
 	colocalized_variant_report = get_colocalized_summary_table(variant_report, trait_name, tissue_name)
 	# Get predicted effect from all snps (limiting to colocalizing components)
 	snp_predicted_effects = get_cafeh_predicted_snp_effects_from_colocalizing_components(snp_names, colocalized_variant_report, trait_name)
+	# Get number of colocalized snps
+	num_coloc_snps = colocalized_variant_report.shape[0]
 
 	#######################
 	# print to output file
 	#######################	
+	# print predicted effects of snps for this gene
+	snp_predicted_effects_file = output_stem + gene_name + '_predicted_effects.txt'
+	print_snp_predicted_effects_for_a_gene(snp_names, snp_predicted_effects, snp_predicted_effects_file)
+
+	# if there are colocalizing snps, print cafeh report to output file
+	if num_coloc_snps > 0:
+		cafeh_report_file = output_stem + gene_name + '_coloc_snps_summary_table.txt'
+		colocalized_variant_report.to_csv(cafeh_report_file, sep='\t', index=False)
+
+def get_num_genes(gene_file):
+	f = open(gene_file)
+	gene_counter = 0
+	for line in f:
+		gene_counter = gene_counter + 1
+	f.close()
+	return (gene_counter-1)
+
+# For parallelization purposes
+def parallelization_start_and_end(num_tasks, job_number, total_jobs):
+	tasks_per_job = (num_tasks/total_jobs) + 1
+	start_task = job_number*tasks_per_job
+	end_task = (job_number + 1)*tasks_per_job -1 
+	return start_task, end_task
+
+
 
 gene_file = sys.argv[1]
 trait_name = sys.argv[2]
 tissue_name = sys.argv[3]
 bivariate_cafeh_output_dir = sys.argv[4]
+job_number = int(sys.argv[5])
+total_jobs = int(sys.argv[6])
 
 
+print(trait_name)
+print(tissue_name)
+print(job_number)
+#For parallelization purposes
+num_genes = get_num_genes(gene_file)
+start_number, end_number = parallelization_start_and_end(num_genes, job_number, total_jobs)
+
+# file stem to write results to
+output_stem = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + tissue_name + '_'
 
 head_count = 0
-counter = 0
-print(gene_file)
+counter = -2
 f = open(gene_file)
 for line in f:
+	counter = counter + 1
 	line = line.rstrip()
 	data = line.split('\t')
+	# Skip header
 	if head_count == 0:
 		head_count = head_count + 1
 		continue
+	# Skip gene ids not in this parallelization run
+	if counter < start_number or counter > end_number:
+		continue
+
 	# Extract relevent fields
 	gene_name = data[0]
 	print(gene_name)
@@ -168,7 +228,6 @@ for line in f:
 	genotype_file = data[2]
 	zscore_file = data[3]
 	sample_size_file = data[4]
-	cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait_name, tissue_name)
+	cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait_name, tissue_name, output_stem)
 
-
-	counter = counter + 1
+f.close()

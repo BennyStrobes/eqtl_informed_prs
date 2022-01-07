@@ -15,15 +15,29 @@ bivariate_cafeh_output_dir="$4"
 
 
 
-
-
-tissue_name="Adipose_Subcutaneous"
-
-
+# Number of parallel jobs per tissue
+total_jobs="6"
 
 
 
+# Loop through tissues
+if false; then
+sed 1d $gtex_tissue_file | while read tissue_name tissue_sample_size; do
+	echo $tissue_name
+	gene_file=$processed_bivariate_cafeh_input_dir$trait_name"_"$tissue_name"_processed_gene_list.txt"
 
-gene_file=$processed_bivariate_cafeh_input_dir$trait_name"_"$tissue_name"_processed_gene_list.txt"
+	# Loop through parallel jobs for this tissue
+	for job_number in $(seq 0 `expr $total_jobs - "1"`); do
+		echo $job_number
+		sbatch run_cafeh_on_bivariate_data.sh $gene_file $trait_name $tissue_name $bivariate_cafeh_output_dir $job_number $total_jobs
+	done
+done 
+fi
 
-sh run_cafeh_on_bivariate_data.sh $gene_file $trait_name $tissue_name $bivariate_cafeh_output_dir
+
+if false; then
+for chrom_num in $(seq 1 22); do
+	echo $chrom_num
+	python organize_cafeh_results_for_prs.py $gtex_tissue_file $trait_name $processed_bivariate_cafeh_input_dir $bivariate_cafeh_output_dir $chrom_num &
+done
+fi
