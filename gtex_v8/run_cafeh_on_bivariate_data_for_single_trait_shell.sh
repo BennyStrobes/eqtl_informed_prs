@@ -25,7 +25,6 @@ if false; then
 sed 1d $gtex_tissue_file | while read tissue_name tissue_sample_size; do
 	echo $tissue_name
 	gene_file=$processed_bivariate_cafeh_input_dir$trait_name"_"$tissue_name"_processed_gene_list.txt"
-
 	# Loop through parallel jobs for this tissue
 	for job_number in $(seq 0 `expr $total_jobs - "1"`); do
 		echo $job_number

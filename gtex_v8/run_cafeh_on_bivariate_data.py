@@ -4,7 +4,7 @@ import sys
 import pdb
 import cafeh
 import pandas as pd
-from cafeh.cafeh_summary import fit_cafeh_summary, fit_cafeh_z
+from cafeh.cafeh_summary import fit_cafeh_summary, fit_cafeh_z, fit_cafeh_summary_fixed_pi
 from cafeh.model_queries import *
 
 
@@ -85,7 +85,7 @@ def get_colocalized_summary_table(variant_report, trait_name, tissue_name):
 	# Extract colocalized variant report
 	colocalized_variant_report = variant_report[variant_report['top_component'].isin(colocalized_components_dicti)]
 	
-	return colocalized_variant_report
+	return colocalized_variant_report, colocalized_components_dicti
 
 def get_cafeh_predicted_snp_effects_from_colocalizing_components(snp_names, colocalized_variant_report, trait_name):
 	trait_colocalized_variant_report = colocalized_variant_report[colocalized_variant_report['study'] == trait_name]
@@ -121,11 +121,13 @@ def print_snp_predicted_effects_for_a_gene(snp_names, snp_predicted_effects, snp
 		t.write(snp_name + '\t' + snp_predicted_effect + '\n')
 	t.close()
 
-def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait_name, tissue_name, output_stem):
+def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, tissue_name, output_stem):
 	# Load in pickled cafeh input data
 	g_df = pd.read_pickle(genotype_file)
 	z_df = pd.read_pickle(zscore_file)
 	n_df = pd.read_pickle(sample_size_file)
+	beta_df = pd.read_pickle(beta_file)
+	std_err_df = pd.read_pickle(std_err_file)
 
 	# Need to filter g_df to only contain columns found in z
 	g_df = filter_snps_in_g_df(g_df, z_df)
@@ -148,15 +150,31 @@ def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait
 	#######################
 	# Run CAFEH
 	#######################
-	cafehs = fit_cafeh_z(LD_df, z_df, n=n_df,K=10, prior_variance=10.0)
+	cafeh_z_model = fit_cafeh_z(LD_df, z_df, n=n_df,K=10, prior_variance=10.0)
+
+
 	# Get un-filtered variant report
-	variant_report = summary_table(cafehs, filter_variants=False, min_p_active=0.0, max_snps= (LD.shape[0])*2 + 1)
-	# Filter to colocalized variants
-	colocalized_variant_report = get_colocalized_summary_table(variant_report, trait_name, tissue_name)
-	# Get predicted effect from all snps (limiting to colocalizing components)
-	snp_predicted_effects = get_cafeh_predicted_snp_effects_from_colocalizing_components(snp_names, colocalized_variant_report, trait_name)
+	variant_report = summary_table(cafeh_z_model, filter_variants=False, min_p_active=0.0, max_snps= (LD.shape[0])*2 + 1)
+
+	# Filter to colocalized variants, also return dictionary of which components colocalize
+	colocalized_variant_report, colocalized_components_dicti = get_colocalized_summary_table(variant_report, trait_name, tissue_name)
 	# Get number of colocalized snps
 	num_coloc_snps = colocalized_variant_report.shape[0]
+
+	# IF there are colocalizing snps, run cafeh again with pi's fixed using beta, std-err model
+	if num_coloc_snps > 0:
+		subset_n_df = n_df.iloc[1:2,:]
+		cafeh_fixed = fit_cafeh_summary_fixed_pi(LD_df, beta_df, std_err_df, np.copy(cafeh_z_model.pi), n=subset_n_df, K=10)
+		fixed_variant_report = summary_table(cafeh_fixed, filter_variants=False, min_p_active=0.0, max_snps= (LD.shape[0])*2 + 1)
+		fixed_colocalized_variant_report = fixed_variant_report[fixed_variant_report['top_component'].isin(colocalized_components_dicti)]
+	else:
+		# hacky but OK
+		fixed_colocalized_variant_report = colocalized_variant_report.copy()
+
+
+	# Get predicted effect from all snps (limiting to colocalizing components)
+	snp_predicted_effects = get_cafeh_predicted_snp_effects_from_colocalizing_components(snp_names, fixed_colocalized_variant_report, trait_name)
+
 
 	#######################
 	# print to output file
@@ -169,6 +187,8 @@ def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait
 	if num_coloc_snps > 0:
 		cafeh_report_file = output_stem + gene_name + '_coloc_snps_summary_table.txt'
 		colocalized_variant_report.to_csv(cafeh_report_file, sep='\t', index=False)
+		cafeh_fixed_pi_report_file = output_stem + gene_name + '_coloc_snps_fixed_pi_summary_table.txt'
+		fixed_colocalized_variant_report.to_csv(cafeh_fixed_pi_report_file, sep='\t', index=False)
 
 def get_num_genes(gene_file):
 	f = open(gene_file)
@@ -228,6 +248,8 @@ for line in f:
 	genotype_file = data[2]
 	zscore_file = data[3]
 	sample_size_file = data[4]
-	cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, trait_name, tissue_name, output_stem)
+	beta_file = data[5]
+	std_err_file = data[6]
+	cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, tissue_name, output_stem)
 
 f.close()

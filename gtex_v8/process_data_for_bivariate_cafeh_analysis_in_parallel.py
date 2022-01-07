@@ -22,7 +22,7 @@ def get_gtex_tissue_names(gtex_tissue_file):
 	f.close()
 	return np.asarray(tissues), np.asarray(sample_sizes)
 
-def create_gwas_snp_id_to_zscore_mapping_on_single_chromosome(sumstat_file, chrom_string, trait_sample_size):
+def create_gwas_snp_id_to_beta_std_err_mapping_on_single_chromosome(sumstat_file, chrom_string, trait_sample_size):
 	f = gzip.open(sumstat_file)
 	dicti = {}
 	error_counter = 0
@@ -42,9 +42,9 @@ def create_gwas_snp_id_to_zscore_mapping_on_single_chromosome(sumstat_file, chro
 		line_string = data[1]
 		if line_string != chrom_string:
 			continue
-		# Extract relevent fields
-		snp_id = 'chr' + data[1] + '_' + data[2] + '_' + data[4] + '_' + data[5]
-		alt_snp_id = 'chr' + data[1] + '_' + data[2] + '_' + data[5] + '_' + data[4]
+		# Extract relevent fields (Effect allele is always last)
+		snp_id = 'chr' + data[1] + '_' + data[2] + '_' + data[5] + '_' + data[4]
+		alt_snp_id = 'chr' + data[1] + '_' + data[2] + '_' + data[4] + '_' + data[5]
 
 		# Get allele frequency
 		af = float(data[6])
@@ -56,12 +56,6 @@ def create_gwas_snp_id_to_zscore_mapping_on_single_chromosome(sumstat_file, chro
 		if chi_sq_bolt_lmm < 0:
 			error_counter = error_counter +1
 			continue
-		unsigned_z_score = np.sqrt(chi_sq_bolt_lmm)
-
-		if beta_bolt_lmm_inf < 0:
-			zscore = unsigned_z_score*-1.0
-		else:
-			zscore = unsigned_z_score*1.0
 
 		# Get maf from af
 		if af > .5:
@@ -71,8 +65,8 @@ def create_gwas_snp_id_to_zscore_mapping_on_single_chromosome(sumstat_file, chro
 		if snp_id in dicti or alt_snp_id in alt_dicti:
 			print('assumption oororor')
 			pdb.set_trace()
-		dicti[snp_id] = (zscore, maf, trait_sample_size, info)
-		alt_dicti[alt_snp_id] = (zscore, maf, trait_sample_size, info)
+		dicti[snp_id] = (beta_bolt_lmm_inf, se_bolt_lmm_inf, maf, trait_sample_size, info)
+		alt_dicti[alt_snp_id] = (beta_bolt_lmm_inf, se_bolt_lmm_inf, maf, trait_sample_size, info)
 	f.close()
 	return dicti, alt_dicti
 
@@ -141,40 +135,58 @@ def extract_gene_level_gtex_data(gene_level_gtex_associations_file):
 
 def get_bivariate_zscores_matrix_and_sample_size_matrix(tissue_snps, tissue_zscores, gwas_snp_id_to_z_score, gwas_snp_id_to_z_score_alt, gtex_tissue, trait_name, gtex_tissue_sample_size):
 	bivariate_zscores = []
+	bivariate_betas = []
+	bivariate_std_errs = []
 	snp_names = []
 	bivariate_sample_sizes = []
 	for snp_index, snp_name in enumerate(tissue_snps):
 		tissue_zscore = tissue_zscores[snp_index]
 		if snp_name in gwas_snp_id_to_z_score:
-			if gwas_snp_id_to_z_score[snp_name][1] < .001 or gwas_snp_id_to_z_score[snp_name][3] < .6:
+			if gwas_snp_id_to_z_score[snp_name][2] < .001 or gwas_snp_id_to_z_score[snp_name][4] < .6:
 				continue
-			bivariate_zscores.append((tissue_zscore, gwas_snp_id_to_z_score[snp_name][0]))
+			gwas_beta = gwas_snp_id_to_z_score[snp_name][0]
+			gwas_std_err = gwas_snp_id_to_z_score[snp_name][1]
+			gwas_zscore = gwas_beta/gwas_std_err
+			bivariate_zscores.append((tissue_zscore, gwas_zscore))
+			bivariate_betas.append(gwas_beta)
+			bivariate_std_errs.append(gwas_std_err)
 			snp_names.append(snp_name)
-			bivariate_sample_sizes.append((gtex_tissue_sample_size, gwas_snp_id_to_z_score[snp_name][2]))
+			bivariate_sample_sizes.append((gtex_tissue_sample_size, gwas_snp_id_to_z_score[snp_name][3]))
 		elif snp_name in gwas_snp_id_to_z_score_alt:
 			# ignore snp if maf < .1% or info score < .6
-			if gwas_snp_id_to_z_score_alt[snp_name][1] < .001 or gwas_snp_id_to_z_score_alt[snp_name][3] < .6:
+			if gwas_snp_id_to_z_score_alt[snp_name][2] < .001 or gwas_snp_id_to_z_score_alt[snp_name][4] < .6:
 				continue
-			bivariate_zscores.append((tissue_zscore, -1.0*gwas_snp_id_to_z_score_alt[snp_name][0]))
+			gwas_beta = -1.0*gwas_snp_id_to_z_score_alt[snp_name][0]
+			gwas_std_err = gwas_snp_id_to_z_score_alt[snp_name][1]
+			gwas_zscore = gwas_beta/gwas_std_err			
+			bivariate_zscores.append((tissue_zscore, gwas_zscore))
+			bivariate_betas.append(gwas_beta)
+			bivariate_std_errs.append(gwas_std_err)
 			snp_names.append(snp_name)
-			bivariate_sample_sizes.append((gtex_tissue_sample_size, gwas_snp_id_to_z_score_alt[snp_name][2]))
+			bivariate_sample_sizes.append((gtex_tissue_sample_size, gwas_snp_id_to_z_score_alt[snp_name][3]))
 		else:
 			continue
 	bivariate_zscore_mat = np.asarray(bivariate_zscores)
+	gwas_beta_arr = np.asarray(bivariate_betas)
+	gwas_std_err_arr = np.asarray(bivariate_std_errs)
 	snp_names = np.asarray(snp_names)
 	bivariate_sample_size_mat = np.asarray(bivariate_sample_sizes)
 	if len(snp_names) > 9:
 		study_ids = np.asarray([gtex_tissue, trait_name])
 		z_df = pd.DataFrame(np.transpose(bivariate_zscore_mat), index=study_ids, columns=snp_names)
+		beta_df = pd.DataFrame(np.asmatrix(gwas_beta_arr), index=study_ids[1:], columns=snp_names)
+		std_err_df = pd.DataFrame(np.asmatrix(gwas_std_err_arr), index=study_ids[1:], columns=snp_names)
 		n_df = pd.DataFrame(np.transpose(bivariate_sample_size_mat.astype(int)), index=study_ids, columns=snp_names)
 		boolers = True
 	else:
 		print('assumption error: Gene thrown out')
 		z_df = 0
 		n_df = 0
+		beta_df = 0
+		std_err_df = 0
 		snp_names = 0
 		boolers = False
-	return z_df, n_df, snp_names, boolers
+	return z_df, beta_df, std_err_df, n_df, snp_names, boolers
 
 def create_mapping_from_hg38_snp_id_to_hg19_snp_id(hg38_to_hg19_mapping_file):
 	mapping = {}
@@ -272,7 +284,7 @@ ordered_genes = np.asarray([*gene_to_tissues])
 
 
 # Create a dictionary mapping from snp_id to gwas z_score (for snps on desired chromosome)
-gwas_snp_id_to_z_score, gwas_snp_id_to_z_score_alt = create_gwas_snp_id_to_zscore_mapping_on_single_chromosome(trait_sumstat_file, str(chrom_num), trait_sample_size)
+gwas_snp_id_to_z_score, gwas_snp_id_to_z_score_alt = create_gwas_snp_id_to_beta_std_err_mapping_on_single_chromosome(trait_sumstat_file, str(chrom_num), trait_sample_size)
 
 
 # Create array of output file handles
@@ -280,7 +292,7 @@ t_arr = []
 for index, gtex_tissue in enumerate(gtex_tissues):
 	output_file = processed_bivariate_cafeh_input_dir + trait_name + '_' + gtex_tissue + '_chr' + str(chrom_num) + '_processed_gene_list.txt'
 	t_arr.append(open(output_file,'w'))
-	t_arr[index].write('gene_id\tchrom_num\tgenotype_pkl_file\tz_pkl_file\tn_pkl_file\n')
+	t_arr[index].write('gene_id\tchrom_num\tgenotype_pkl_file\tz_pkl_file\tn_pkl_file\tbeta_pkl_file\tstd_err_pkl_file\n')
 
 
 
@@ -325,17 +337,23 @@ for gene_id in ordered_genes:
 			gene_tissue_boolean = False
 		else:
 			# Get bivariate zscores for this tissues
-			z_df, n_df, snp_names, gene_tissue_boolean = get_bivariate_zscores_matrix_and_sample_size_matrix(tissue_snps, tissue_zscores, gwas_snp_id_to_z_score, gwas_snp_id_to_z_score_alt, gtex_tissue, trait_name, gtex_tissue_sample_size)
+			z_df, beta_df, std_err_df, n_df, snp_names, gene_tissue_boolean = get_bivariate_zscores_matrix_and_sample_size_matrix(tissue_snps, tissue_zscores, gwas_snp_id_to_z_score, gwas_snp_id_to_z_score_alt, gtex_tissue, trait_name, gtex_tissue_sample_size)
 
 		if gene_tissue_boolean == True:
 			# Save z_df to pkl
 			z_pkl_output_file = processed_bivariate_cafeh_input_dir + trait_name + '_' + gtex_tissue + '_' + gene_id + '_z_df.pkl'
 			z_df.to_pickle(z_pkl_output_file)
+			# Save beta_df to pkl
+			beta_pkl_output_file = processed_bivariate_cafeh_input_dir + trait_name + '_' + gtex_tissue + '_' + gene_id + '_beta_df.pkl'
+			beta_df.to_pickle(beta_pkl_output_file)
+			# Save std_err_df to pkl
+			std_err_pkl_output_file = processed_bivariate_cafeh_input_dir + trait_name + '_' + gtex_tissue + '_' + gene_id + '_std_err_df.pkl'
+			std_err_df.to_pickle(std_err_pkl_output_file)
 			# Save n_df to pkl
 			n_pkl_output_file = processed_bivariate_cafeh_input_dir + trait_name + '_' + gtex_tissue + '_' + gene_id + '_n_df.pkl'
 			n_df.to_pickle(n_pkl_output_file)
 
-			t_arr[tissue_index].write(gene_id + '\t' + str(chrom_num) + '\t' + genotype_pkl_output_file + '\t' + z_pkl_output_file + '\t' + n_pkl_output_file + '\n')
+			t_arr[tissue_index].write(gene_id + '\t' + str(chrom_num) + '\t' + genotype_pkl_output_file + '\t' + z_pkl_output_file + '\t' + n_pkl_output_file + '\t' + beta_pkl_output_file + '\t' + std_err_pkl_output_file + '\n')
 
 for index, gtex_tissue in enumerate(gtex_tissues):
 	t_arr[index].close()
