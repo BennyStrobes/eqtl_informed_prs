@@ -33,7 +33,6 @@ sed 1d $gtex_tissue_file | while read tissue_name tissue_sample_size; do
 done 
 fi
 
-
 if false; then
 for chrom_num in $(seq 1 22); do
 	echo $chrom_num

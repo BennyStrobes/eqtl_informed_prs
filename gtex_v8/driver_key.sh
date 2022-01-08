@@ -114,7 +114,7 @@ sh generate_ukbb_sample_name_lists.sh $ukbb_download_data $ukbb_sample_names_dir
 fi
 
 if false; then
-for chrom_num in $(seq 2 22); do
+for chrom_num in $(seq 1 22); do
 	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num
 done
 fi

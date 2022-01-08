@@ -99,18 +99,35 @@ counter = 1
 with BgenFile(bgen_file, delay_parsing=True) as bfile:
 	for var in bfile:
 		dosage = var.minor_allele_dosage
-		variant_id = var.varid
+		temp_variant_id = var.varid
+		minor_allele = var.minor_allele
+		alleles = var.alleles
 		# error checking
 		if len(dosage) != total_samples:
 			print('assumption eroror')
-		if len(var.alleles) != 2:
+		if len(alleles) != 2:
 			print('assumption eororro')
-		# get alt variant id
+
+		allele = 'False'
+		for allele in alleles:
+			if allele != minor_allele:
+				major_allele = allele
+		if allele == 'False':
+			print('assumption erroror')
+			pdb.set_trace()
+		
+		# Want variant id to be of form chrom_num:position_non-effect-allele_effect_allele
+		variant_id = temp_variant_id.split('_')[0] + '_' + major_allele + '_' + minor_allele
+
 		variant_info = variant_id.split('_')
 		if len(variant_info) != 3:
 			variant_id = var.chrom + ':' + str(var.pos) + '_' + var.alleles[0] + '_' + var.alleles[1]
 			variant_info = variant_id.split('_')
 		counter = counter + 1
+
+		if variant_info[2] != minor_allele:
+			print('minor allele assumption erororor')
+			pdb.set_trace()
 		
 		if variant_id not in variant_to_effect_sizes:
 			continue
