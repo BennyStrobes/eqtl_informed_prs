@@ -51,7 +51,7 @@ def create_mapping_from_full_samples_to_desired_samples(bgen_samples_file, desir
 
 	return mapping, len(full_samples), len(desired_samples), desired_samples
 
-def create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file):
+def create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file, beta_threshold):
 	f = open(cafeh_prs_betas_file)
 	head_count = 0
 	mapping = {}
@@ -64,6 +64,11 @@ def create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file):
 			continue
 		variant_id = data[0]
 		weights = np.asarray(data[1:]).astype(float)
+		# Fillter betas
+		for index, weight in enumerate(weights):
+			if np.abs(weight) > beta_threshold:
+				weights[index] = 0.0
+		# Done fillter betas
 		variant_info = data[0].split('_')
 		chrom_num = variant_info[0].split('hr')[1]
 
@@ -84,9 +89,10 @@ bgen_samples_file = sys.argv[2]
 desired_samples_file = sys.argv[3]
 cafeh_prs_betas_file = sys.argv[4] # input file
 ukbb_prs_file = sys.argv[5] # output file
+beta_threshold = float(sys.argv[6])
 
 
-variant_to_effect_sizes, tissue_names = create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file)
+variant_to_effect_sizes, tissue_names = create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file, beta_threshold)
 
 
 sample_mapping, total_samples, num_prs_samples, prs_sample_names = create_mapping_from_full_samples_to_desired_samples(bgen_samples_file, desired_samples_file)

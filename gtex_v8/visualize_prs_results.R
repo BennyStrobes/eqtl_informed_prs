@@ -34,6 +34,33 @@ make_heatmap <- function(corr_mat) {
 
 }
 
+make_prs_pc_scatter_colored_by_covariate <- function(pc1, pc2, cov, pc1_name, pc2_name, cov_name) {
+    df <- data.frame(loading_1=pc1, loading_2=pc2, covariate=cov)
+    plotter <- ggplot(df) + 
+               geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=.1) +
+               gtex_v8_figure_theme() + 
+               labs(x=pc1_name, y = pc2_name, color=cov_name) + 
+               scale_colour_gradient2() +
+               scale_color_gradient(low="pink",high="blue") +
+               theme(legend.position="bottom") + 
+               theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
+    return(plotter)
+}
+
+make_scatter_density_plot <- function(pc1, pc2, pc1_name, pc2_name) {
+    df <- data.frame(loading_1=pc1, loading_2=pc2)
+    plotter <- ggplot(df, aes(x=loading_1, y=loading_2)) + 
+               geom_hex(bins=70) +
+                scale_fill_continuous(type = "viridis") +
+                theme_bw() +
+               gtex_v8_figure_theme() + 
+               labs(x=pc1_name, y = pc2_name) + 
+               theme(legend.position="bottom") + 
+               theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
+    return(plotter)
+
+}
+
 input_dir <- args[1]
 output_dir <- args[2]
 
@@ -50,6 +77,35 @@ corr_file <- paste0(input_dir, "blood_white_count_prs_correlation_matrix.txt")
 corr_mat <- read.table(corr_file, header=TRUE, sep="\t")
 corr_mat <- corr_mat[,2:(dim(corr_mat)[2])]
 
-heatmap <- make_heatmap(corr_mat)
-ggsave(heatmap, file=paste0(output_dir, "headmap.pdf"))
+prs_pc_file = paste0(input_dir, "blood_white_count_prs_pcs.txt")
+prs_pcs = read.table(prs_pc_file, header=TRUE, sep="\t")
+
+cov_file = paste0(input_dir, "blood_white_count_blood_covariates.txt")
+cov = read.table(cov_file, header=TRUE, sep="\t")
+
+
+# Make PRS PC scatter colored by covariate
+output_file <- paste0(output_dir, "prs_pc1_vs_prs_pc2_scatter_colored_by_blood_white_count.pdf")
+scatter <- make_prs_pc_scatter_colored_by_covariate(prs_pcs$prs_pc1, prs_pcs$prs_pc2, cov$blood_WHITE_COUNT, "PRS_PC1", "PRS_PC2", "blood_white_count")
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(output_dir, "prs_pc2_vs_prs_pc3_scatter_colored_by_blood_white_count.pdf")
+scatter <- make_prs_pc_scatter_colored_by_covariate(prs_pcs$prs_pc2, prs_pcs$prs_pc3, cov$blood_WHITE_COUNT, "PRS_PC2", "PRS_PC3", "blood_white_count")
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(output_dir, "prs_pc1_vs_blood_white_count_scatter_colored_by_prs_pc2.pdf")
+scatter <- make_prs_pc_scatter_colored_by_covariate(prs_pcs$prs_pc1, cov$blood_WHITE_COUNT, prs_pcs$prs_pc2, "PRS_PC1", "blood_white_count", "PRS_PC2")
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(output_dir, "prs_pc2_vs_blood_NEUTROPHIL_PCT.pdf")
+scatter <- make_scatter_density_plot(prs_pcs$prs_pc2, cov$blood_NEUTROPHIL_PCT, "PRS_PC2", "blood_neutrophil_pct")
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(output_dir, "prs_pc1_vs_blood_WHITE_COUNT.pdf")
+scatter <- make_scatter_density_plot(prs_pcs$prs_pc1, cov$blood_WHITE_COUNT, "PRS_PC1", "blood_white_count")
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+#heatmap <- make_heatmap(corr_mat)
+#ggsave(heatmap, file=paste0(output_dir, "headmap.pdf"))
 

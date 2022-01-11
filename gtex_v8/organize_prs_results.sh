@@ -12,5 +12,34 @@ ukbb_pheno_file2="$3"
 ukbb_pheno_file3="$4"
 
 source ~/.bash_profile
-python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3
+if false; then
+thresh=".005"
+echo $thresh
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $thresh
+
+
+thresh=".05"
+echo $thresh
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $thresh
+
+thresh=".1"
+echo $thresh
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $thresh
+
+
+thresh=".5"
+echo $thresh
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $thresh
+
+thresh="1"
+echo $thresh
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $thresh
+fi
+
+
+thresh=".05"
+echo $thresh
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $thresh
+
+
 

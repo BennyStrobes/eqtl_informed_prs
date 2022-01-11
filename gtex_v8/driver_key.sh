@@ -103,8 +103,8 @@ output_root="/n/groups/price/ben/eqtl_informed_prs/"
 # Directory containing filtered UKBB sample names
 ukbb_sample_names_dir=$output_root"ukbb_sample_names/"
 # Directory containing generate PRS
-ukbb_prs_dir=$output_root"ukbb_prs/"
 ukbb_prs_dir=$output_root"ukbb_prs/old/"
+ukbb_prs_dir=$output_root"ukbb_prs/"
 # Directory containing generate PRS
 ukbb_prs_viz_dir=$output_root"visualize_ukbb_prs/"
 
@@ -113,9 +113,14 @@ if false; then
 sh generate_ukbb_sample_name_lists.sh $ukbb_download_data $ukbb_sample_names_dir
 fi
 
+
+
+beta_thresholds=( "1" ".5" ".1" ".05" ".01" ".005")
 if false; then
-for chrom_num in $(seq 1 22); do
-	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num
+for beta_threshold in "${beta_thresholds[@]}"; do	
+	for chrom_num in $(seq 1 22); do
+		sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num $beta_threshold
+	done
 done
 fi
 
@@ -123,16 +128,8 @@ if false; then
 sh organize_prs_results.sh $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3
 fi
 
-if false; then
 module load R/3.5.1
 Rscript visualize_prs_results.R $ukbb_prs_dir $ukbb_prs_viz_dir
-fi
-
-
-
-
-
-
 
 
 
