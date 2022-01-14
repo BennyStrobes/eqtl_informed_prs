@@ -27,11 +27,28 @@ def extract_gtex_tissue_names(gtex_tissue_file):
 
 	return np.asarray(arr)
 
+def extract_num_components_from_raw_cafeh_file(raw_cafeh_file):
+	f = open(raw_cafeh_file)
+	head_count = 0
+	dicti = {}
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			continue
+		dicti[data[3]] = 1
+	f.close()
+	return len(dicti)
 
 
-def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files, output_file):
+
+def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files, output_file, output_file2):
 	num_tissues = len(gtex_tissues)
 	# Initialize dicti to map from variant id to vector of length number of tissues (only have variant id if non-zero in one tissue)
+	snp_counter = {}
+	for tissue in gtex_tissues:
+		snp_counter[tissue] = 0
 	dicti = {}
 	# loop through tissues
 	for tissue_index, gene_file in enumerate(gene_files):
@@ -46,9 +63,14 @@ def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files
 		for gene in genes:
 			# get cafeh file for each gene
 			cafeh_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + tissue_name + '_' + gene + '_predicted_effects.txt'
+			raw_cafeh_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + tissue_name + '_' + gene + '_coloc_snps_fixed_pi_summary_table.txt'
 			# check if file exists
-			if os.path.exists(cafeh_file) == False:
+			if os.path.exists(raw_cafeh_file) == False:
 				continue
+			# Keep track of number of components in each tissue
+			num_snps = extract_num_components_from_raw_cafeh_file(raw_cafeh_file)
+			snp_counter[tissue_name] = snp_counter[tissue_name] + num_snps
+			# get effect sizes
 			f = open(cafeh_file)
 			head_count = 0
 			for line in f:
@@ -73,6 +95,11 @@ def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files
 	for snp_name in dicti.keys():
 		t.write(snp_name + '\t' + '\t'.join(dicti[snp_name].astype(str)) + '\n')
 	t.close()
+	t = open(output_file2, 'w')
+	t.write('tissue_name\tnum_components\n')
+	for tissue in gtex_tissues:
+		t.write(tissue + '\t' + str(snp_counter[tissue]) + '\n')
+	t.close()
 
 
 
@@ -94,6 +121,8 @@ gene_files = np.asarray(gene_files)
 # Make PRS beta file seperately for each chromosome
 print(chrom_num)
 output_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_prs_beta_chrom_' + str(chrom_num) + '.txt'
-make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files, output_file)
+output_file2 = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_num_prs_components_chrom_' + str(chrom_num) + '.txt'
+
+make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files, output_file, output_file2)
 
 

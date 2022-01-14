@@ -39,3 +39,7 @@ for chrom_num in $(seq 1 22); do
 	python organize_cafeh_results_for_prs.py $gtex_tissue_file $trait_name $processed_bivariate_cafeh_input_dir $bivariate_cafeh_output_dir $chrom_num &
 done
 fi
+
+if false; then
+python print_number_of_cafeh_components_per_tissue.py $gtex_tissue_file $trait_name $bivariate_cafeh_output_dir
+fi
