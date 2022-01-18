@@ -8,6 +8,7 @@ import gzip
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import statsmodels.api as sm
+from linear_regression_mixtures import LinearRegressionsMixture
 
 
 def extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name, threshold):
@@ -94,6 +95,47 @@ def extract_trait_covariates(ukbb_pheno_file1, sample_names):
 		arr.append(sample_dicti[sample_name])
 	trait_cov = np.asarray(arr)
 	return trait_cov, trait_names
+
+def extract_covariates_from_cov1(ukbb_pheno_file2, sample_names, cov_name):
+	sample_dicti = {}
+	for sample_name in sample_names:
+		sample_dicti[sample_name] = np.nan
+	used_samples = {}
+	
+	head_count = 0
+	f = open(ukbb_pheno_file2)
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if len(data) != 95:
+			print('assumption eroror')
+			pdb.set_trace()
+		if head_count == 0:
+			head_count = head_count + 1
+			pheno_index = np.where(np.asarray(data) == cov_name)[0][0]
+			continue	
+		sample_name = data[0]
+		if sample_name not in sample_dicti:
+			continue
+		used_samples[sample_name] = 1
+		if data[pheno_index] == 'NA':
+			continue
+		sample_dicti[sample_name] = float(data[pheno_index])
+	f.close()
+
+	if len(used_samples) != len(sample_dicti):
+		print('assumption eroorr')
+		pdb.set_trace()
+
+	arr = []
+	for sample_name in sample_names:
+		arr.append(sample_dicti[sample_name])
+
+	if len(arr) != len(sample_dicti):
+		print('assumption erorror')
+		pdb.set_trace()
+
+	return np.asarray(arr)
 
 
 def extract_covariates_from_cov2(ukbb_pheno_file2, sample_names, cov_name):
@@ -360,6 +402,46 @@ def print_pca_ve_to_output(pca_ve, output_file):
 		t.write('pc' + str(pc_num+1) + '\t' + str(pca_ve[pc_num]) + '\n')
 	t.close()
 
+def run_mixture_of_regressions(prs_mat, pheno):
+	epsilon = 1e-4
+	lam = 0.001
+	iterations = 300
+	random_restarts = 1
+	K=2	
+	model = LinearRegressionsMixture(prs_mat, np.expand_dims(pheno, axis=1), K=K)
+	model.train(epsilon=epsilon, lam=lam, iterations=iterations, random_restarts=random_restarts, verbose=False)
+
+	return model.probability, model.w, model.pi
+
+def learn_non_linear_prs_weights_wrapper(prs_train, pheno_train, prs_test, pheno_test, cov_test):
+	epsilon = 1e-4
+	lam = 0.001
+	iterations = 2
+	random_restarts = 1
+	K=2
+	model = LinearRegressionsMixture(prs_train, np.expand_dims(pheno_train, axis=1), K=K)
+	model.train(epsilon=epsilon, lam=lam, iterations=iterations, random_restarts=random_restarts, verbose=False)
+
+	num_test_samples = prs_test.shape[0]
+
+	predz = []
+	posteriors = []
+
+	for test_sample_num in range(num_test_samples):
+		y_new, y_posteriors = model.predict(prs_test[test_sample_num,:], posteriors=True)
+		predz.append(y_new)
+		posteriors.append(y_posteriors)
+	predz = np.asarray(predz)
+	posteriors = np.asarray(posteriors)
+
+	print(np.sort(posteriors[:,0]))
+
+	#X_full = np.asarray(np.hstack((cov_test, np.asmatrix(predz).T)))
+	#X_null = np.asarray(cov_test)
+	#relative_r_squared = compute_relative_r_squared(X_full, X_null, pheno_test)
+
+	return predz
+
 ukbb_prs_dir = sys.argv[1]
 ukbb_pheno_file1 = sys.argv[2]
 ukbb_pheno_file2 = sys.argv[3]
@@ -367,7 +449,7 @@ ukbb_pheno_file3 = sys.argv[4]
 thresh = sys.argv[5]
 
 
-trait_name = 'blood_white_count'
+trait_name = 'whr_adjusted_bmi'
 
 
 output_stem = ukbb_prs_dir + trait_name + '_'
@@ -379,12 +461,9 @@ output_stem = ukbb_prs_dir + trait_name + '_'
 prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name, thresh)
 
 
-
-
 # Extract phenotype vector
-pheno =extract_covariates_from_cov2(ukbb_pheno_file2, sample_names, 'blood_WHITE_COUNT_v2')
-
-
+#pheno =extract_covariates_from_cov2(ukbb_pheno_file2, sample_names, 'blood_WHITE_COUNT_v2')
+pheno =extract_covariates_from_cov1(ukbb_pheno_file1, sample_names, 'body_WHRadjBMIz')
 
 # Remove unobserved samples with respect to phenotype of interest
 observed = ~np.isnan(pheno)
@@ -426,6 +505,7 @@ principalComponents = pca.fit_transform(residual_prs_mat)
 pca_ve = pca.explained_variance_ratio_
 pca_factors = pca.components_
 
+
 pc_names = []
 for pc_num in range(num_pcs):
 	pc_names.append('prs_pc' + str(pc_num+1))
@@ -433,6 +513,13 @@ write_matrix_to_output(principalComponents.astype(str), np.asarray(pc_names), sa
 write_matrix_to_output(np.transpose(pca_factors.astype(str)), np.asarray(pc_names), prs_names, output_stem + 'prs_pca_principal_components.txt')
 print_pca_ve_to_output(pca_ve, output_stem + 'prs_pca_variance_explained.txt')
 
+
+# Run mixture of regressions on prs ma
+#mor_posteriors, mor_weights, mor_pis  = run_mixture_of_regressions(prs_mat, pheno)
+#mor_component_names = np.asarray(['mor_component_1', 'mor_component_2'])
+#write_matrix_to_output(mor_posteriors.astype(str), np.asarray(mor_component_names), sample_names, output_stem + 'mixture_of_regressions_posteriors.txt')
+#write_matrix_to_output(mor_weights.astype(str), np.asarray(mor_component_names), prs_names, output_stem + 'mixture_of_regressions_weights.txt')
+#write_matrix_to_output(np.expand_dims(mor_pis,axis=0).astype(str), np.asarray(mor_component_names), np.asarray(['pi']), output_stem + 'mixture_of_regressions_pi.txt')
 
 
 # Randomly select training and testing indices
@@ -463,10 +550,14 @@ final = np.vstack((np.asmatrix(new_names), temp))
 corr_mat_output_file = output_stem + 'prs_correlation_matrix.txt'
 np.savetxt(corr_mat_output_file, final, fmt="%s",delimiter="\t")
 
-# Fit prs weights
-num_bootstrap_samples = 1000
-prs_weights, prs_weights_standard_errors = learn_prs_weights_wrapper(prs_train, pheno_train, num_bootstrap_samples)
 
+# Learn non linear prs weights
+non_linear_joint_prs = learn_non_linear_prs_weights_wrapper(prs_train, pheno_train, prs_test, pheno_test, cov_test)
+
+# Fit prs weights (to training data)
+num_bootstrap_samples = 1000
+num_bootstrap_samples = 100
+prs_weights, prs_weights_standard_errors = learn_prs_weights_wrapper(prs_train, pheno_train, num_bootstrap_samples)
 # Print PRS weights to output
 t = open(output_stem + 'prs_weights.txt','w')
 t.write('prs_name\tweight\tweight_standard_error\n')
@@ -474,10 +565,22 @@ for index,prs_name in enumerate(prs_names):
 	t.write(prs_name + '\t' + str(prs_weights[index]) + '\t' + str(prs_weights_standard_errors[index]) + '\n')
 t.close()
 
-print(prs_weights)
+# Fit prs weights (to all samples)
+num_bootstrap_samples = 1000
+num_bootstrap_samples = 100
+prs_weights_all, prs_weights_all_standard_errors = learn_prs_weights_wrapper(prs_mat, pheno, num_bootstrap_samples)
+# Print PRS weights to output
+t = open(output_stem + 'prs_weights_all_samples.txt','w')
+t.write('prs_name\tweight\tweight_standard_error\n')
+for index,prs_name in enumerate(prs_names):
+	t.write(prs_name + '\t' + str(prs_weights_all[index]) + '\t' + str(prs_weights_all_standard_errors[index]) + '\n')
+t.close()
+
+
 
 # Relative R-squared
 num_jack_knife_samples = 200
+num_jack_knife_samples = 2
 relative_r_squared_arr = []
 relative_r_squared_std_err_arr = []
 for prs_index, prs_name in enumerate(prs_names):
@@ -496,6 +599,9 @@ t.write('prs_name\trelative_r_squared\trelative_r_squared_standard_error\n')
 for index,prs_name in enumerate(prs_names):
 	t.write(prs_name + '\t' + str(relative_r_squared_arr[index]) + '\t' + str(relative_r_squared_std_err_arr[index]) + '\n')
 t.write('joint_prs\t' + str(relative_r_squared_arr[-1]) + '\t' + str(relative_r_squared_std_err_arr[-1]) + '\n')
+
+non_linear_r_squared, non_linear_r_squared_std_err = compute_relative_r_squared_wrapper(non_linear_joint_prs, pheno_test, cov_test, num_jack_knife_samples)
+t.write('non_linear_joint_prs\t' + str(non_linear_r_squared) + '\t' + str(non_linear_r_squared_std_err) + '\n')
 t.close()
 
 

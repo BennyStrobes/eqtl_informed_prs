@@ -41,14 +41,26 @@ def extract_num_components_from_raw_cafeh_file(raw_cafeh_file):
 	f.close()
 	return len(dicti)
 
-
+def get_num_eqtls(num_eqtls_file):
+	f = open(num_eqtls_file)
+	count = 0
+	for line in f:
+		line = line.rstrip()
+		count = count + 1
+	f.close()
+	if count != 1:
+		print('erroro')
+		pdb.set_trace()
+	return int(line)
 
 def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files, output_file, output_file2):
 	num_tissues = len(gtex_tissues)
 	# Initialize dicti to map from variant id to vector of length number of tissues (only have variant id if non-zero in one tissue)
 	snp_counter = {}
+	eqtl_counter = {}
 	for tissue in gtex_tissues:
 		snp_counter[tissue] = 0
+		eqtl_counter[tissue] = 0
 	dicti = {}
 	# loop through tissues
 	for tissue_index, gene_file in enumerate(gene_files):
@@ -64,6 +76,16 @@ def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files
 			# get cafeh file for each gene
 			cafeh_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + tissue_name + '_' + gene + '_predicted_effects.txt'
 			raw_cafeh_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + tissue_name + '_' + gene + '_coloc_snps_fixed_pi_summary_table.txt'
+			num_eqtls_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + tissue_name + '_' + gene + '_number_eqtl_components.txt'
+			# Extract number of eqtls identified by this tissue for this gene
+			if os.path.exists(num_eqtls_file) == False:
+				if os.path.exists(raw_cafeh_file) == True:
+					print('assumption erorororooror')
+					pdb.set_trace()
+				continue
+			num_eqtls = get_num_eqtls(num_eqtls_file)
+			eqtl_counter[tissue_name] = eqtl_counter[tissue_name] + num_eqtls
+
 			# check if file exists
 			if os.path.exists(raw_cafeh_file) == False:
 				continue
@@ -96,9 +118,9 @@ def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_files
 		t.write(snp_name + '\t' + '\t'.join(dicti[snp_name].astype(str)) + '\n')
 	t.close()
 	t = open(output_file2, 'w')
-	t.write('tissue_name\tnum_components\n')
+	t.write('tissue_name\tnum_components\tnum_eqtl_components\n')
 	for tissue in gtex_tissues:
-		t.write(tissue + '\t' + str(snp_counter[tissue]) + '\n')
+		t.write(tissue + '\t' + str(snp_counter[tissue]) + '\t' + str(eqtl_counter[tissue]) + '\n')
 	t.close()
 
 

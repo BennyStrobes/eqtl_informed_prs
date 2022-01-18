@@ -17,6 +17,7 @@ bivariate_cafeh_output_dir = sys.argv[3]
 tissues = []
 tissue_to_sample_size = {}
 tissue_to_num_components = {}
+tissue_to_num_eqtls = {}
 
 
 f = open(gtex_tissue_file)
@@ -32,6 +33,7 @@ for line in f:
 	tissues.append(tissue_name)
 	tissue_to_sample_size[tissue_name] = samp_size
 	tissue_to_num_components[tissue_name] = 0
+	tissue_to_num_eqtls[tissue_name] = 0
 f.close()
 tissues = np.asarray(tissues)
 
@@ -49,15 +51,18 @@ for chrom_num in range(1,23):
 			continue
 		tissue_name = data[0]
 		num_components = int(data[1])
+		num_eqtls = int(data[2])
 		tissue_to_num_components[tissue_name] = tissue_to_num_components[tissue_name] + num_components
+		tissue_to_num_eqtls[tissue_name] = tissue_to_num_eqtls[tissue_name] + num_eqtls
 	f.close()
 
 # print to output file
 t = open(bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_num_prs_components.txt', 'w')
-t.write('tissue\tsample_size\tnum_cafeh_components\n')
+t.write('tissue\tsample_size\tnum_cafeh_components\tnum_cafeh_eqtl_components\n')
 for tissue in tissues:
 	samp_size = tissue_to_sample_size[tissue]
 	num_comp = tissue_to_num_components[tissue]
-	t.write(tissue + '\t' + str(samp_size) + '\t' + str(num_comp) + '\n')
+	num_eqtls = tissue_to_num_eqtls[tissue]
+	t.write(tissue + '\t' + str(samp_size) + '\t' + str(num_comp) + '\t' + str(num_eqtls) + '\n')
 t.close()
 

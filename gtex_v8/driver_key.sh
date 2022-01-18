@@ -59,13 +59,13 @@ sample_size="337491"
 trait_name="whr_adjusted_bmi"
 trait_sumstat_file=$summary_stat_dir"bolt_337K_unrelStringentBrit_MAF0.001_v3.body_WHRadjBMIz.bgen.stats.gz"
 sample_size="487409"
+if false; then
 sh process_data_for_bivariate_cafeh_analysis.sh $trait_name $trait_sumstat_file $gtex_tissue_file $gtex_cafeh_data $processed_gtex_associations_dir $processed_bivariate_cafeh_input_dir $sample_size
-
+fi
 
 if false; then
 sh run_cafeh_on_bivariate_data_for_single_trait_shell.sh $trait_name $gtex_tissue_file $processed_bivariate_cafeh_input_dir $bivariate_cafeh_output_dir
 fi
-
 
 
 
@@ -92,7 +92,7 @@ ukbb_sumstats_dir="/n/groups/price/UKBiobank/sumstats/bolt_337K_unrelStringentBr
 # Beta files
 cafeh_prs_betas_dir="/n/groups/price/ben/eqtl_informed_prs/input_data/"
 # File containing estimates of number of cafeh components per tissue
-num_components_per_tissue_file="/n/groups/price/ben/eqtl_informed_prs/input_data/cafeh_results_blood_white_count_num_prs_components.txt"
+num_components_per_tissue_file="/n/groups/price/ben/eqtl_informed_prs/input_data/cafeh_results_whr_adjusted_bmi_num_prs_components.txt"
 # UKBB Phenotype files
 ukbb_pheno_file1="/n/groups/price/steven/RareVariants/Final/UKB_new_sumstats/UKB_v3.061518.tab"
 ukbb_pheno_file2="/n/groups/price/UKBiobank/app19808mosaic/bloodQC/ukb4777.blood_v2.covars.tab"
@@ -113,7 +113,7 @@ ukbb_prs_dir=$output_root"ukbb_prs/"
 # Directory containing generate PRS
 ukbb_prs_viz_dir=$output_root"visualize_ukbb_prs/"
 
-trait_name="blood_white_count"
+trait_name="whr_adjusted_bmi"
 
 
 
@@ -123,18 +123,24 @@ fi
 
 
 
+beta_threshold=".5"
+chrom_num="1"
+if false; then
+sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num $beta_threshold $trait_name
+fi
+
 beta_thresholds=( "1" ".5" ".1" ".05" ".01" ".005")
+beta_thresholds=(".05")
 if false; then
 for beta_threshold in "${beta_thresholds[@]}"; do	
 	for chrom_num in $(seq 1 22); do
-		sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num $beta_threshold
+		sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num $beta_threshold $trait_name
 	done
 done
 fi
 
-if false; then
+
 sh organize_prs_results.sh $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3
-fi
 
 
 if false; then

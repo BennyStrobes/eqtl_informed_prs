@@ -11,6 +11,7 @@ cafeh_prs_betas_dir="$3"
 ukbb_prs_dir="$4"
 chrom="$5"
 beta_threshold="$6"
+trait_name="$7"
 
 
 source ~/.bash_profile
@@ -21,7 +22,7 @@ echo $chrom
 echo $beta_threshold
 
 
-cafeh_prs_betas_file=$cafeh_prs_betas_dir"cafeh_results_blood_white_count_prs_beta_chrom_"${chrom}".txt"
-ukbb_prs_file=$ukbb_prs_dir"blood_white_count_cafeh_prs_beta_threshold_"${beta_threshold}"_chrom_"${chrom}".txt"
+cafeh_prs_betas_file=$cafeh_prs_betas_dir"cafeh_results_"$trait_name"_prs_beta_chrom_"${chrom}".txt"
+ukbb_prs_file=$ukbb_prs_dir$trait_name"_cafeh_prs_beta_threshold_"${beta_threshold}"_chrom_"${chrom}".txt"
 
 python3 generate_prs.py ${ukbb_download_data}ukb_imp_chr${chrom}_v3.bgen ${ukbb_download_data}ukb1404_imp_chr1_v3_withdrawn3.sample ${sample_names_keep_file} $cafeh_prs_betas_file $ukbb_prs_file $beta_threshold

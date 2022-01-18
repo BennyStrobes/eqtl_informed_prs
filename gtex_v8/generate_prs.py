@@ -100,7 +100,6 @@ sample_mapping, total_samples, num_prs_samples, prs_sample_names = create_mappin
 # Create matrix to keep track of PRS
 prs_mat = np.zeros((num_prs_samples, len(tissue_names)))
 
-
 counter = 1
 with BgenFile(bgen_file, delay_parsing=True) as bfile:
 	for var in bfile:

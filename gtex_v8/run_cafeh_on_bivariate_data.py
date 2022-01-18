@@ -11,61 +11,6 @@ from cafeh.model_queries import *
 def filter_snps_in_g_df(df1, df2):
 	return df1[df2.columns.values]
 
-def debugging(g_df, gene_name):
-	snp_hg38_to_hg19_mapping_file = '/work-zfs/abattle4/bstrober/eqtl_informed_prs/gtex_v8/processed_gtex_associations/' + gene_name + '_hg38_to_hg19_snp_mapping.txt'
-	hg19_to_hg38 = {}
-	hg38_to_hg19 = {}
-	f = open(snp_hg38_to_hg19_mapping_file)
-	head_count = 0
-	for line in f:
-		line = line.rstrip()
-		data = line.split('\t')
-		if head_count == 0:
-			head_count = head_count + 1
-			continue
-		hg38 = data[0]
-		hg19 = data[1]
-		if hg19 == 'NA':
-			continue
-		hg19_to_hg38[hg19] = hg38
-		hg38_to_hg19[hg38] = hg19
-	f.close()
-
-	chrom_string = g_df.columns[0].split('_')[0]
-
-	raw_hg38_genotype_file = '/work-zfs/abattle4/karl/cosie_analysis/output/GTEx/' + chrom_string + '/' + gene_name + '/' + gene_name + '.raw'
-
-	raw_hg38_genotype = np.loadtxt(raw_hg38_genotype_file,dtype=str,delimiter=' ')
-	raw_hg38_genotype = raw_hg38_genotype[:,6:]
-
-	num_snps = raw_hg38_genotype.shape[1]
-
-	for snp_num in range(num_snps):
-		hg38_snp_name_raw = raw_hg38_genotype[0, snp_num]
-		hg38_snp_name = hg38_snp_name_raw.split('_b38')[0] + '_b38'
-		info = hg38_snp_name_raw.split('_')
-		if len(info) != 6:
-			print('assuption error')
-			pdb.set_trace()
-		if info[3] != info[5]:
-			print('assusmptionerororo')
-			pdb.set_trace()
-		if hg38_snp_name not in hg38_to_hg19:
-			continue
-		genotype = raw_hg38_genotype[1:, snp_num]
-		observed_indices = genotype != 'NA'
-		genotype = genotype[observed_indices]
-		hg19_snp_name = hg38_to_hg19[hg38_snp_name]
-		if hg19_snp_name not in g_df.columns:
-			continue
-		corry = np.corrcoef(np.asarray(g_df[hg19_snp_name])[observed_indices], genotype.astype(float))
-		if corry[0,1] < .99:
-			print('erroror')
-			pdb.set_trace()
-		#if corry[0,1] != 1.0:
-		if np.array_equal(np.asarray(g_df[hg19_snp_name])[observed_indices], genotype.astype(float)) == False:
-			print('eroror')
-			pdb.set_trace()
 
 def get_colocalized_summary_table(variant_report, trait_name, tissue_name):
 	# Get components active in gwas study
@@ -121,6 +66,11 @@ def print_snp_predicted_effects_for_a_gene(snp_names, snp_predicted_effects, snp
 		t.write(snp_name + '\t' + snp_predicted_effect + '\n')
 	t.close()
 
+def print_num_eqtl_components(num_eqtl_components, num_eqtl_components_output_file):
+	t = open(num_eqtl_components_output_file,'w')
+	t.write(str(num_eqtl_components) + '\n')
+	t.close()
+
 def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, tissue_name, output_stem):
 	# Load in pickled cafeh input data
 	g_df = pd.read_pickle(genotype_file)
@@ -160,6 +110,9 @@ def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_
 	colocalized_variant_report, colocalized_components_dicti = get_colocalized_summary_table(variant_report, trait_name, tissue_name)
 	# Get number of colocalized snps
 	num_coloc_snps = colocalized_variant_report.shape[0]
+	# Get number of eQTL components
+	eqtl_variant_report = variant_report[(variant_report['study'] == tissue_name) & (variant_report['p_active'] > .5)]
+	num_eqtl_components = len(np.unique(eqtl_variant_report['top_component']))
 
 	# IF there are colocalizing snps, run cafeh again with pi's fixed using beta, std-err model
 	if num_coloc_snps > 0:
@@ -182,6 +135,10 @@ def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_
 	# print predicted effects of snps for this gene
 	snp_predicted_effects_file = output_stem + gene_name + '_predicted_effects.txt'
 	print_snp_predicted_effects_for_a_gene(snp_names, snp_predicted_effects, snp_predicted_effects_file)
+
+	# print number of eqtl components for this gene
+	num_eqtl_components_output_file = output_stem + gene_name + '_number_eqtl_components.txt'
+	print_num_eqtl_components(num_eqtl_components, num_eqtl_components_output_file)
 
 	# if there are colocalizing snps, print cafeh report to output file
 	if num_coloc_snps > 0:

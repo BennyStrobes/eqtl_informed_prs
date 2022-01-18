@@ -18,9 +18,6 @@ bivariate_cafeh_output_dir="$4"
 # Number of parallel jobs per tissue
 total_jobs="6"
 
-
-
-# Loop through tissues
 if false; then
 sed 1d $gtex_tissue_file | while read tissue_name tissue_sample_size; do
 	echo $tissue_name
@@ -40,6 +37,5 @@ for chrom_num in $(seq 1 22); do
 done
 fi
 
-if false; then
 python print_number_of_cafeh_components_per_tissue.py $gtex_tissue_file $trait_name $bivariate_cafeh_output_dir
-fi
+

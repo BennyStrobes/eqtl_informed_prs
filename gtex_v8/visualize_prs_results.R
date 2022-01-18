@@ -204,12 +204,45 @@ make_pc_variance_explained_line_plot <- function(variance_explained) {
 }
 
 
+temp_correlation <- function(vec, expr_pcs) {
+  expr_pcs <- expr_pcs[,2:(dim(expr_pcs)[2])]
+
+  # Get stdev of each column of expr_pcs and remove columns with no variation
+  valid_columns = c()
+  for (col_num in 1:(dim(expr_pcs)[2])) {
+    vary = var(expr_pcs[,col_num], na.rm=TRUE)
+    if (vary != 0.0) {
+      valid_columns <- c(valid_columns, col_num)
+    }
+  }
+  expr_pcs <- expr_pcs[, valid_columns]
+
+
+
+  expr_pc_names <- colnames(expr_pcs)
+  expr_pcs <- as.matrix(expr_pcs)
+  num_expr_pcs <- dim(expr_pcs)[2]
+
+    for (num_expr_pc in 1:num_expr_pcs) {
+            expr_pc_vec <- expr_pcs[,num_expr_pc]
+            expr_pc_name <- expr_pc_names[num_expr_pc]
+            #print(paste0(num_pc, " - ", num_cov))
+            lin_model <- lm(vec ~ expr_pc_vec)
+            pve <- summary(lin_model)$adj.r.squared
+
+            print(paste0(expr_pc_name, "\t", pve))
+    }
+
+
+}
+
 ######################################
 # Make correlation heatmap correlating covariates with loadings
 #######################################
 make_covariate_pc_loading_correlation_heatmap <- function(expr_pcs, loadings, cluster_boolean) {
   loadings <- loadings[,2:(dim(loadings)[2])]
   expr_pcs <- expr_pcs[,2:(dim(expr_pcs)[2])]
+
 
 
   # Get stdev of each column of expr_pcs and remove columns with no variation
@@ -293,6 +326,11 @@ tissue_specific_prs_scores_file <- paste0(input_dir, "blood_white_count_standard
 tissue_specific_prs_scores <- read.table(tissue_specific_prs_scores_file, header=TRUE, sep="\t")
 scores_mat = as.matrix(tissue_specific_prs_scores[,2:(dim(tissue_specific_prs_scores)[2])])
 
+# Load in MOR posteriors
+mor_posterior_file <- paste0(input_dir,"blood_white_count_mixture_of_regressions_posteriors.txt")
+mor_posterior <- read.table(mor_posterior_file, header=TRUE, sep="\t")
+
+
 # Load in learned weights for each tissue prs
 prs_weights_file <- paste0(input_dir, "blood_white_count_prs_weights.txt")
 prs_weights <- read.table(prs_weights_file, header=TRUE, sep="\t")
@@ -346,6 +384,8 @@ technical_cov_file <- paste0(input_dir, "blood_white_count_technical_covariates.
 technical_cov = read.table(technical_cov_file, header=TRUE, sep="\t")
 
 
+
+temp_correlation(mor_posterior$mor_component_1, blood_cov)
 
 ###################
 # Scatter plot correlating gtex tissue sample size with number of cafeh components identified
@@ -451,6 +491,14 @@ output_file <- paste0(output_dir, "whole_blood_prs_vs_brain_cortex_prs_colored_b
 scatter <- make_prs_pc_scatter_colored_by_covariate(tissue_specific_prs_scores$Whole_Blood, tissue_specific_prs_scores$Brain_Cortex, global_prs, "Whole Blood PRS", "Brain Cortex PRS", "Global PRS")
 ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
 
+output_file <- paste0(output_dir, "whole_blood_prs_vs_brain_cortex_prs_colored_by_mor_posterior.pdf")
+scatter <- make_prs_pc_scatter_colored_by_covariate(tissue_specific_prs_scores$Whole_Blood, tissue_specific_prs_scores$Brain_Cortex, mor_posterior$mor_component_1, "Whole Blood PRS", "Brain Cortex PRS", "MOR posterior 1")
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(output_dir, "whole_blood_prs_vs_adipose_subcutaneous_prs_colored_by_mor_posterior.pdf")
+scatter <- make_prs_pc_scatter_colored_by_covariate(tissue_specific_prs_scores$Whole_Blood, tissue_specific_prs_scores$Adipose_Subcutaneous, mor_posterior$mor_component_1, "Whole Blood PRS", "Adipose Subcutaneous PRS", "MOR posterior 1")
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
 output_file <- paste0(output_dir, "whole_blood_prs_vs_adipose_subcutaneous_prs_density_plot.pdf")
 scatter <- make_scatter_density_plot(tissue_specific_prs_scores$Whole_Blood, tissue_specific_prs_scores$Adipose_Subcutaneous, "Whole Blood PRS", "Adipose_Subcutaneous PRS")
 ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
@@ -458,6 +506,10 @@ ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
 output_file <- paste0(output_dir, "whole_blood_prs_vs_brain_cortex_prs_density_plot.pdf")
 scatter <- make_scatter_density_plot(tissue_specific_prs_scores$Whole_Blood, tissue_specific_prs_scores$Brain_Cortex, "Whole Blood PRS", "Brain Cortex PRS")
 ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+
+
 
 
 
