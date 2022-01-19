@@ -1,3 +1,52 @@
+##################
+# Input data
+##################
+# Directory containing GTEx genotype data
+# Shared by Tiffany. Created by Huwenbo
+gtex_genotype_dir="/n/groups/price/huwenbo/DATA/GTEx_v8/GTEx_v8_genotypes_EUR/"
+
+# Directory containing GTEx covariate data
+# Shared by Tiffany. Created by Huwenbo
+gtex_covariate_dir="/n/groups/price/huwenbo/DATA/GTEx_v8/GTEx_Analysis_v8_eQTL_covariates/"
+
+# Directory containing GTEx TPM expression
+gtex_tpm_expression_dir="/n/groups/price/GTEX/GTEX_V8/TPM/"
+
+
+# Directory continaing file for each tissue (Downsampled_Individuals_320_{$tissue_name}.txt) containing down-sampled individuals
+# Directory created by Tiffany.
+gtex_downsampled_individuals_dir="/n/groups/price/tiffany/subpheno/AllGTExTissues_restore/Downsampled_Ind/"
+
+
+# Create tissue files
+
+
+# Create expression and covariates for each file
+
+
+# Get data ready for eqtl calling 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
