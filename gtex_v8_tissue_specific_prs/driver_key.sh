@@ -1,47 +1,3 @@
-##################
-# Input data
-##################
-# Directory containing GTEx genotype data
-# Shared by Tiffany. Created by Huwenbo
-gtex_genotype_dir="/n/groups/price/huwenbo/DATA/GTEx_v8/GTEx_v8_genotypes_EUR/"
-
-# Directory containing GTEx covariate data
-# Shared by Tiffany. Created by Huwenbo
-gtex_covariate_dir="/n/groups/price/huwenbo/DATA/GTEx_v8/GTEx_Analysis_v8_eQTL_covariates/"
-
-# Directory containing GTEx TPM expression
-gtex_tpm_expression_dir="/n/groups/price/GTEX/GTEX_V8/TPM/"
-
-
-# Directory continaing file for each tissue (Downsampled_Individuals_320_{$tissue_name}.txt) containing down-sampled individuals
-# Directory created by Tiffany.
-gtex_downsampled_individuals_dir="/n/groups/price/tiffany/subpheno/AllGTExTissues_restore/Downsampled_Ind/"
-
-
-# Create tissue files
-
-
-# Create expression and covariates for each file
-
-
-# Get data ready for eqtl calling 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -139,9 +95,9 @@ ukbb_download_data="/n/groups/price/UKBiobank/download_500K/"
 # UKBB sumstats
 ukbb_sumstats_dir="/n/groups/price/UKBiobank/sumstats/bolt_337K_unrelStringentBrit_MAF0.001_v3/"
 # Beta files
-cafeh_prs_betas_dir="/n/groups/price/ben/eqtl_informed_prs/input_data/"
+cafeh_prs_betas_dir="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_tissue_specific_prs/input_data/"
 # File containing estimates of number of cafeh components per tissue
-num_components_per_tissue_file="/n/groups/price/ben/eqtl_informed_prs/input_data/cafeh_results_whr_adjusted_bmi_num_prs_components.txt"
+num_components_per_tissue_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_tissue_specific_prs/input_data/cafeh_results_whr_adjusted_bmi_num_prs_components.txt"
 # UKBB Phenotype files
 ukbb_pheno_file1="/n/groups/price/steven/RareVariants/Final/UKB_new_sumstats/UKB_v3.061518.tab"
 ukbb_pheno_file2="/n/groups/price/UKBiobank/app19808mosaic/bloodQC/ukb4777.blood_v2.covars.tab"
@@ -153,7 +109,7 @@ ukbb_pheno_file3="/n/groups/price/UKBiobank/app10438assoc/ukb4777.processed_and_
 # Output data
 ##################
 # Root output directory
-output_root="/n/groups/price/ben/eqtl_informed_prs/"
+output_root="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_tissue_specific_prs/"
 # Directory containing filtered UKBB sample names
 ukbb_sample_names_dir=$output_root"ukbb_sample_names/"
 # Directory containing generate PRS
@@ -188,9 +144,9 @@ for beta_threshold in "${beta_thresholds[@]}"; do
 done
 fi
 
-
+if false; then
 sh organize_prs_results.sh $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3
-
+fi
 
 if false; then
 module load R/3.5.1
