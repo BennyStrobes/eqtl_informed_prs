@@ -44,7 +44,8 @@ pseudotissue_expression_dir=${output_root}"pseudotissue_expression/"
 pseudotissue_genotype_dir=${output_root}"pseudotissue_genotype/"
 # Directory containing covariate daata
 pseudotissue_covariate_dir=${output_root}"pseudotissue_covariates/"
-
+# Directory containing eQTL results
+pseudotissue_eqtl_dir=${output_root}"pseudotissue_eqtl_summary_stats/"
 
 
 
@@ -91,3 +92,28 @@ fi
 
 
 
+
+
+
+###################
+# Run matrix eQTL (in each pseudotissue)
+# loop through pseudotissues here
+if false; then
+sed 1d $pseudotissue_info_file | while read pseudotissue_name sample_size sample_repeat composit_tissue_string; do
+	sbatch matrix_eqtl_shell.sh $pseudotissue_name $pseudotissue_expression_dir $pseudotissue_genotype_dir $pseudotissue_covariate_dir $pseudotissue_eqtl_dir
+done
+fi
+
+
+###################
+# Run LMM eQTL (in each pseudotissue)
+# loop through pseudotissues here (only perform for pseudotissues with sample repeat structure)
+if false; then
+sed 1d $pseudotissue_info_file | while read pseudotissue_name sample_size sample_repeat composit_tissue_string; do
+	if [ "$sample_repeat" = "True" ]; then
+		for chrom_num in $(seq 1 22); do 
+			sbatch lmm_eqtl_shell.sh $pseudotissue_name $pseudotissue_expression_dir $pseudotissue_genotype_dir $pseudotissue_covariate_dir ${pseudotissue_sample_names_dir} $pseudotissue_eqtl_dir $chrom_num
+		done
+	fi
+done
+fi
