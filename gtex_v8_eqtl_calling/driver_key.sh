@@ -72,8 +72,9 @@ fi
 
 ###################
 # Generate covariate matrices for each of pseudobulk tissues
+if false; then
 sh generate_pseudotissue_covariate_matrices.sh $pseudotissue_info_file $pseudotissue_sample_names_dir $pseudotissue_expression_dir $gtex_covariate_dir $pseudotissue_covariate_dir
-
+fi
 
 ###################
 # Generate genotype matrices for each of pseudobulk tissues

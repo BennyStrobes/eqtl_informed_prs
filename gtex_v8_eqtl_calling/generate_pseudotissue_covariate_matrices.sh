@@ -15,7 +15,6 @@ pseudotissue_covariate_dir="$5"
 
 
 
-
 # Loop through pseudotissues in pseudotissue info file
 sed 1d $pseudotissue_info_file | while read pseudotissue sample_size sample_repeat composit_tissue_string; do
 

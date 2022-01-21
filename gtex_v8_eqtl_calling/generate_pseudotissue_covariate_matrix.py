@@ -60,7 +60,7 @@ def extract_covariates_from_gtex_covariate_files(composit_tissues, gtex_covariat
 		covariate_mapping[covariate_name] = i
 
 	# Initialize covariate matrix
-	cov_mat = np.reshape(['NULL']*num_samples*num_covariates, (num_covariates,num_samples))
+	cov_mat = np.zeros((num_covariates,num_samples)) - 1000
 
 	for composit_tissue in composit_tissues:
 		covariate_file = gtex_covariate_dir + composit_tissue + '.v8.covariates.txt'
@@ -81,14 +81,14 @@ def extract_covariates_from_gtex_covariate_files(composit_tissues, gtex_covariat
 
 				row_index = covariate_mapping[covariate_name]
 				col_index = sample_mapping[composit_tissue_sample_name]
-				if cov_mat[row_index, col_index] != 'NULL':
+				if cov_mat[row_index, col_index] != -1000.0:
 					print('assumption eororor')
 					pdb.set_trace()
-				cov_mat[row_index, col_index] = cov[ii,jj]
-	if np.sum(cov_mat == 'NULL') != 0:
+				cov_mat[row_index, col_index] = float(cov[ii,jj])
+	if np.sum(cov_mat == -1000.0) != 0:
 		print('assumption erroro')
 		pdb.set_trace()
-	return cov_mat, covariates	
+	return cov_mat.astype(str), covariates	
 
 ### Command line args
 pseudotissue = sys.argv[1]
@@ -123,9 +123,17 @@ t = open(covariate_output_file,'w')
 t.write('id\t' + '\t'.join(pseudotissue_sample_names) + '\n')
 
 for index, expr_pc_identifier in enumerate(expr_pc_identifiers):
+	arr = expr_pc_mat[index,:]
+	if np.var(arr.astype(float)) == 0:
+		print('assumption eroror')
+		pdb.set_trace()
 	t.write(expr_pc_identifier + '\t' + '\t'.join(expr_pc_mat[index,:]) + '\n')
 
 for index, cov_identifier in enumerate(cov_identifiers):
+	arr = cov_mat[index,:]
+	if np.var(arr.astype(float)) == 0:
+		print('assumption eroror')
+		pdb.set_trace()
 	t.write(cov_identifier + '\t' + '\t'.join(cov_mat[index,:]) + '\n')
 
 t.close()
