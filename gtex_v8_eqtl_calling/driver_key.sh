@@ -46,8 +46,8 @@ pseudotissue_genotype_dir=${output_root}"pseudotissue_genotype/"
 pseudotissue_covariate_dir=${output_root}"pseudotissue_covariates/"
 # Directory containing eQTL results
 pseudotissue_eqtl_dir=${output_root}"pseudotissue_eqtl_summary_stats/"
-
-
+# Directory containing gene level genotype reference panel
+genotype_reference_panel_dir=${output_root}"gene_level_genotype_reference_panel/"
 
 ##################
 # Run analysis
@@ -90,11 +90,6 @@ fi
 
 
 
-
-
-
-
-
 ###################
 # Run matrix eQTL (in each pseudotissue)
 # loop through pseudotissues here
@@ -115,5 +110,17 @@ sed 1d $pseudotissue_info_file | while read pseudotissue_name sample_size sample
 			sbatch lmm_eqtl_shell.sh $pseudotissue_name $pseudotissue_expression_dir $pseudotissue_genotype_dir $pseudotissue_covariate_dir ${pseudotissue_sample_names_dir} $pseudotissue_eqtl_dir $chrom_num
 		done
 	fi
+done
+fi
+
+
+
+
+###################
+# Generate gene level genotype reference panels
+cross_tissue_gene_list_file=${pseudotissue_expression_dir}"cross_tissue_gene_list.txt"
+if false; then
+for chrom_num in $(seq 1 22); do 
+	sbatch generate_gene_level_genotype_reference_panel.sh $chrom_num $cross_tissue_gene_list_file $gtex_genotype_dir $genotype_reference_panel_dir
 done
 fi

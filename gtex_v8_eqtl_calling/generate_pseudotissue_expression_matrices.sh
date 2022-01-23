@@ -31,5 +31,6 @@ sed 1d $pseudotissue_info_file | while read pseudotissue sample_size sample_repe
 done
 
 
+python3 make_cross_tissue_gene_list.py $pseudotissue_info_file $pseudotissue_expression_dir
 
 
