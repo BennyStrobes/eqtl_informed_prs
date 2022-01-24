@@ -125,3 +125,4 @@ for chrom_num in $(seq 1 22); do
 done
 fi
 
+

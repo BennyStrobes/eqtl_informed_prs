@@ -13,7 +13,24 @@ def get_snp_positions_from_snp_names(snp_names):
 	return np.asarray(positions)
 
 
-
+def load_in_genotype_data(genotype_dosage_file):
+	f = open(genotype_dosage_file)
+	head_count = 0
+	geno_raw = []
+	snp_names = []
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			header = np.asarray(data)
+			continue
+		snp_name = data[0]
+		dosages = data[1:]
+		snp_names.append(snp_name)
+		geno_raw.append(data)
+	f.close()
+	return np.asarray(header), np.asarray(snp_names), np.asarray(geno_raw)
 
 
 chrom_num = sys.argv[1]
@@ -24,10 +41,21 @@ genotype_reference_panel_dir = sys.argv[4]  # output dir
 cis_window = 500000.0
 
 # Load in genotype data
-geno_raw = np.loadtxt(genotype_dosage_file, dtype=str, delimiter='\t')
-header = geno_raw[0,:]
-snp_names = geno_raw[1:,0]
-geno_raw = geno_raw[1:,:]
+#geno_raw = np.loadtxt(genotype_dosage_file, dtype=str, delimiter='\t')
+#header = geno_raw[0,:]
+#snp_names = geno_raw[1:,0]
+#geno_raw = geno_raw[1:,:]
+header, snp_names, geno_raw = load_in_genotype_data(genotype_dosage_file)
+
+
+# Quick eroror checking
+for i,snp_name in enumerate(snp_names):
+	if snp_name.endswith('b38') == False:
+		print('assumption erororo')
+		pdb.set_trace()
+	if snp_name != geno_raw[i,0]:
+		print('assumptione ororor')
+		pdb.set_trace()
 
 # Get snp positions from snp names
 snp_positions = get_snp_positions_from_snp_names(snp_names)

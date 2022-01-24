@@ -122,7 +122,6 @@ for gene_index, test_gene in enumerate(ordered_genes):
     # file containing variants for this gene
     variant_file = genotype_reference_panel_dir + 'genotype_reference_panel_' + test_gene + '.txt'
     genotyped_variant_list = get_list_of_genotyped_variants(variant_file)
-    
 
     # print to output file
     output_file = processed_gtex_associations_dir + test_gene + '_associations.csv'
@@ -134,6 +133,7 @@ for gene_index, test_gene in enumerate(ordered_genes):
     gene_test_arr = gene_dicti[test_gene]
 
     # Print cis snps to output file
+    counter = 0
     for gene_test_string in gene_test_arr:
         test_variant_id = gene_test_string.split(',')[2]
         # Filter out variants with AF < THRESH across all gtex european samples
@@ -142,5 +142,8 @@ for gene_index, test_gene in enumerate(ordered_genes):
         if test_variant_id not in genotyped_variant_list:
             continue
         t.write(gene_test_string + '\n')
+        counter = counter + 1
+    if counter == 0:
+        print(test_gene + ' assumption error')
     t.close()
 

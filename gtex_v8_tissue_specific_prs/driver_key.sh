@@ -14,7 +14,7 @@ cafeh_code_dir="/work-zfs/abattle4/bstrober/tools/cafeh/"
 # Directory containing summary statistics
 # contains file called study_info explaining files and where they came from
 # NEED TO UPDATE
-summary_stat_dir="/work-zfs/abattle4/bstrober/eqtl_informed_prs/input_data/sumstats/"
+summary_stat_dir="/n/groups/price/UKBiobank/sumstats/bolt_337K_unrelStringentBrit_MAF0.001_v3/"
 
 #Directory that contains necessary liftover information.
 ##Specifically, it must contain:
@@ -63,20 +63,19 @@ bivariate_cafeh_output_dir=$output_root"bivariate_cafeh_output/"
 ##################
 # Run analysis
 ##################
-
 if false; then
 sh process_gtex_associations_for_cafeh.sh $processed_gtex_associations_dir $cafeh_gene_list_file $liftover_directory $eqtl_summary_stats_dir $gtex_tissue_file $genotype_reference_panel_dir
 fi
 
-trait_name="blood_white_count"
-trait_sumstat_file=$summary_stat_dir"bolt_337K_unrelStringentBrit_MAF0.001_v3.blood_WHITE_COUNT.bgen.stats.gz"
-sample_size="337491"
+#trait_name="whr_adjusted_bmi"
+#trait_sumstat_file=$summary_stat_dir"bolt_337K_unrelStringentBrit_MAF0.001_v3.body_WHRadjBMIz.bgen.stats.gz"
+#sample_size="487409"
 
-trait_name="whr_adjusted_bmi"
-trait_sumstat_file=$summary_stat_dir"bolt_337K_unrelStringentBrit_MAF0.001_v3.body_WHRadjBMIz.bgen.stats.gz"
-sample_size="487409"
+trait_name="blood_WHITE_COUNT"
+trait_sumstat_file=$summary_stat_dir"bolt_337K_unrelStringentBrit_MAF0.001_v3."${trait_name}".bgen.stats.gz"
+sample_size="337491"
 if false; then
-sh process_data_for_bivariate_cafeh_analysis.sh $trait_name $trait_sumstat_file $gtex_tissue_file $gtex_cafeh_data $processed_gtex_associations_dir $processed_bivariate_cafeh_input_dir $sample_size
+sh process_data_for_bivariate_cafeh_analysis.sh $trait_name $trait_sumstat_file $gtex_tissue_file $genotype_reference_panel_dir $processed_gtex_associations_dir $processed_bivariate_cafeh_input_dir $sample_size $cafeh_gene_list_file
 fi
 
 if false; then

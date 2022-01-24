@@ -11,7 +11,7 @@ cross_tissue_gene_list_file="$2"
 gtex_genotype_dir="$3"
 genotype_reference_panel_dir="$4"
 
-
+if false; then
 plink --bfile ${gtex_genotype_dir}"GTEx_v8_genotype_EUR."${chrom_num} --geno 0.0 --maf .005 --recode vcf --out ${genotype_reference_panel_dir}"GTEx_v8_genotype_EUR_"${chrom_num}
 
 
@@ -21,6 +21,6 @@ python3 convert_vcf_file_to_dosage_file.py ${genotype_reference_panel_dir}"GTEx_
 rm ${genotype_reference_panel_dir}"GTEx_v8_genotype_EUR_"${chrom_num}".vcf"
 rm ${genotype_reference_panel_dir}"GTEx_v8_genotype_EUR_"${chrom_num}".nosex"
 rm ${genotype_reference_panel_dir}"GTEx_v8_genotype_EUR_"${chrom_num}".log"
-
+fi
 genotype_dosage_file=${genotype_reference_panel_dir}"GTEx_v8_genotype_EUR_"${chrom_num}"_dosage.txt"
 python3 extract_gene_level_genotype_reference_panels_on_single_chromosome.py $chrom_num $genotype_dosage_file $cross_tissue_gene_list_file $genotype_reference_panel_dir
