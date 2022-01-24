@@ -1,22 +1,23 @@
-#!/bin/bash -l
-
-#SBATCH
-#SBATCH --time=15:00:00
-#SBATCH --partition=shared
-#SBATCH --mem=5GB
-#SBATCH --nodes=1
+#!/bin/bash
+#SBATCH -c 1                               # Request one core
+#SBATCH -t 0-8:00                         # Runtime in D-HH:MM format
+#SBATCH -p short                           # Partition to run in
+#SBATCH --mem=40G                         # Memory total in MiB (for all cores)
 
 
 
-cafeh_gene_list="$1"
+
+cafeh_gene_list_file="$1"
 processed_gtex_associations_dir="$2"
-job_number="$3"
-num_jobs="$4"
-liftover_directory="$5"
+chrom_num="$3"
+liftover_directory="$4"
+eqtl_summary_stats_dir="$5"
+gtex_tissue_file="$6"
+genotype_reference_panel_dir="$7"
+
+source ~/.bash_profile
+
+python3 process_gtex_associations_for_cafeh_in_parallel.py $cafeh_gene_list_file $processed_gtex_associations_dir $chrom_num $eqtl_summary_stats_dir $gtex_tissue_file $genotype_reference_panel_dir
 
 
-
-module load python/2.7-anaconda53
-python process_gtex_associations_for_cafeh_in_parallel.py $cafeh_gene_list $processed_gtex_associations_dir $job_number $num_jobs
-
-python liftover_cafeh_association_files_to_hg19.py $cafeh_gene_list $processed_gtex_associations_dir $liftover_directory $job_number $num_jobs
+python3 liftover_cafeh_association_files_to_hg19.py $cafeh_gene_list_file $processed_gtex_associations_dir $liftover_directory $chrom_num

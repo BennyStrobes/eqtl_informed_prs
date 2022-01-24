@@ -1,31 +1,21 @@
-#!/bin/bash -l
-
-#SBATCH
-#SBATCH --time=10:00:00
-#SBATCH --partition=shared
-#SBATCH --mem=10GB
-#SBATCH --nodes=1
+#!/bin/bash
+#SBATCH -c 1                               # Request one core
+#SBATCH -t 0-10:00                         # Runtime in D-HH:MM format
+#SBATCH -p short                           # Partition to run in
+#SBATCH --mem=60G                         # Memory total in MiB (for all cores)
 
 
 
 processed_gtex_associations_dir="$1"
-gene_info_file="$2"
+cafeh_gene_list_file="$2"
 liftover_directory="$3"
+eqtl_summary_stats_dir="$4"
+gtex_tissue_file="$5"
+genotype_reference_panel_dir="$6"
 
-
-module load python/2.7-anaconda53
-
-cafeh_gene_list=$processed_gtex_associations_dir"cafeh_gene_list.txt"
+source ~/.bash_profile
 if false; then
-python get_gtex_gene_list_for_cafeh.py $cafeh_gene_list $gene_info_file
-fi
-
-
-# Get summary stat association statistics for each gene
-# Also liftover those sumstats from hg38 to hg19
-num_jobs="20"
-if false; then
-for job_number in $(seq 0 $(($num_jobs-1))); do 
-	sbatch process_gtex_associations_for_cafeh_in_parallel.sh $cafeh_gene_list $processed_gtex_associations_dir $job_number $num_jobs $liftover_directory
+for chrom_num in $(seq 1 22); do 
+	sbatch process_gtex_associations_for_cafeh_in_parallel.sh $cafeh_gene_list_file $processed_gtex_associations_dir $chrom_num $liftover_directory $eqtl_summary_stats_dir $gtex_tissue_file $genotype_reference_panel_dir
 done
 fi

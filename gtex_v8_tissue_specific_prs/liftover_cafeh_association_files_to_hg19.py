@@ -28,10 +28,10 @@ def association_file_to_bed_file(cafeh_hg38_file, temp_hg38_bed):
 		if head_count == 0:
 			head_count = head_count + 1
 			continue
-		if len(data) != 11:
+		if len(data) != 6:
 			print('assumption eroror')
 			pdb.set_trace()
-		snp_id = data[3]
+		snp_id = data[2]
 		snp_info = snp_id.split('_')
 		chrom_num = snp_info[0]
 		pos = snp_info[1]
@@ -69,7 +69,7 @@ def recreate_cafeh_association_file_in_hg19_format(hg38_association_file, hg19_a
 			head_count = head_count + 1
 			t.write(line + '\n')
 			continue
-		snp_id = data[3]
+		snp_id = data[2]
 		snp_info = snp_id.split('_')
 		snp_key = snp_info[0] + '_' + snp_info[1]
 		if snp_key in missing:
@@ -77,7 +77,7 @@ def recreate_cafeh_association_file_in_hg19_format(hg38_association_file, hg19_a
 			continue
 		hg19_info = next(g).rstrip().split('\t')
 		new_snp_id = hg19_info[0] + '_' + hg19_info[1] + '_' + snp_info[2] + '_' + snp_info[3]
-		t.write(','.join(data[:3]) + ',' + new_snp_id + ',' + ','.join(data[4:]) + '\n')
+		t.write(','.join(data[:2]) + ',' + new_snp_id + ',' + ','.join(data[3:]) + '\n')
 		t_mapping.write(snp_id + '\t' + new_snp_id + '\n')
 	f.close()
 	g.close()
@@ -99,37 +99,42 @@ def error_checking(liftover_output_file, hg19_association_file):
 		print('assumption erororo')
 
 
-
-# For parallelization purposes
-def parallelization_start_and_end(num_tasks, job_number, total_jobs):
-    tasks_per_job = (num_tasks/total_jobs) + 1
-    start_task = job_number*tasks_per_job
-    end_task = (job_number + 1)*tasks_per_job -1 
-    return start_task, end_task
-
-
-
+def get_genes_on_chromosome(cafeh_gene_list, chrom_num):
+    f = open(cafeh_gene_list)
+    counter = 0
+    head_count = 0
+    genes = []
+    gene_dicti = {}
+    for line in f:
+        line = line.rstrip()
+        data = line.split('\t')
+        counter = counter + 1
+        if head_count == 0:
+            head_count = head_count + 1
+            continue
+        gene_name = data[0]
+        line_chrom_num = data[1]
+        if line_chrom_num != 'chr' + chrom_num:
+            continue
+        genes.append(gene_name)
+        gene_dicti[gene_name] = []
+    f.close()
+    return np.asarray(genes)
 
 
 
 cafeh_gene_list = sys.argv[1]
 processed_gtex_associations_dir = sys.argv[2]
 liftover_directory = sys.argv[3]
-job_number = int(sys.argv[4])
-total_jobs = int(sys.argv[5])
+chrom_num = sys.argv[4]
 
 
+# Extract ordered list of genes on this chromosome
+ordered_genes = get_genes_on_chromosome(cafeh_gene_list, chrom_num)
 
-ordered_genes = extract_ordered_genes_from_gene_list(cafeh_gene_list)
-
-#For parallelization purposes
-start_number, end_number = parallelization_start_and_end(len(ordered_genes), job_number, total_jobs)
 
 # Loop through genes
 for gene_index, gene in enumerate(ordered_genes):
-	# Skip genes not in this parallelization run
-	if gene_index < start_number or gene_index > end_number:
-		continue
 	# Cafeh file in hg38 format
 	cafeh_hg38_file = processed_gtex_associations_dir + gene + '_associations.csv'
 	# First convert hg38  association to temporary bed format

@@ -124,3 +124,4 @@ for chrom_num in $(seq 1 22); do
 	sbatch generate_gene_level_genotype_reference_panel.sh $chrom_num $cross_tissue_gene_list_file $gtex_genotype_dir $genotype_reference_panel_dir
 done
 fi
+
