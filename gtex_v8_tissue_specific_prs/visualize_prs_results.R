@@ -89,6 +89,15 @@ make_prs_pc_scatter_colored_by_covariate <- function(pc1, pc2, cov, pc1_name, pc
     return(plotter)
 }
 
+make_cafeh_eqtl_component_vs_cafeh_coloc_component_scatter <- function(tissue_df) {
+    plotter <- ggplot(tissue_df) + 
+               geom_point(aes(x=num_cafeh_eqtl_components, y=num_cafeh_components)) +
+               gtex_v8_figure_theme() + 
+               labs(x="Number of eQTL CAFEH components", y = "Number of colocalizing CAFEH components") + 
+               theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
+    return(plotter)
+}
+
 make_tissue_sample_size_num_cafeh_component_scatter <- function(tissue_df) {
     plotter <- ggplot(tissue_df) + 
                geom_point(aes(x=sample_size, y=num_cafeh_components)) +
@@ -96,6 +105,7 @@ make_tissue_sample_size_num_cafeh_component_scatter <- function(tissue_df) {
                labs(x="Tissue sample size", y = "Number of CAFEH components") + 
                theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
     return(plotter)
+
 }
 
 make_scatter_density_plot <- function(pc1, pc2, pc1_name, pc2_name) {
@@ -159,6 +169,31 @@ make_prs_weight_bar_plot_with_standard_errors <- function(prs_weights, ordered_s
 
   return(p)
 
+}
+
+make_prs_weight_per_eqtl_component_bar_plot_with_standard_errors <- function(prs_weights, ordered_studies) {
+  prs_weights$prs_name = factor(prs_weights$prs_name, levels=ordered_studies)
+    p <- ggplot(data=prs_weights, aes(x=prs_name, y=weight)) +
+    geom_bar(stat="identity", color="black", position=position_dodge(), width=.75) +
+    gtex_v8_figure_theme() +
+    theme(legend.position="top") +
+    theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10)) +
+    labs(y="PRS NNLS weight/eqtl component", x="", fill="") +
+    geom_errorbar(aes(ymin=weight-(weight_standard_error), ymax=weight+(weight_standard_error)), position = position_dodge(), width = .75, size=.2)
+
+  return(p)
+
+}
+
+make_fraction_of_eqtl_components_that_colocalize <- function(tissue_df) {
+  tissue_df$fraction = tissue_df$num_cafeh_components/tissue_df$num_cafeh_eqtl_components
+  print(head(tissue_df))
+  p <- ggplot(data=tissue_df, aes(x=tissue, y=fraction)) +
+    geom_bar(stat="identity", color="black", position=position_dodge(), width=.75) +
+    gtex_v8_figure_theme() +
+    theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10)) +
+    labs(y="Fraction of eQTL components that coloc", x="", fill="")
+  return(p)
 }
 
 prs_principal_component_number_of_components_scatter <- function(pc_vec, tissue_names_pc, tissue_df, component_num) {
@@ -315,15 +350,21 @@ make_covariate_pc_loading_correlation_heatmap <- function(expr_pcs, loadings, cl
 }
 
 
-input_dir <- args[1]
-output_dir <- args[2]
-num_components_per_tissue_file <- args[3]
 
 
-trait_name <- "whr_adjusted_bmi"
+trait_name <- args[1]
+bivariate_cafeh_output_dir <- args[2]
+ukbb_prs_dir <- args[3]
+analyzed_ukbb_prs_dir <- args[4]
+output_dir <- args[5]
+model_version <- args[6]
+
+output_dir <- paste0(output_dir, trait_name, "_", model_version, "_")
+
+num_components_per_tissue_file <- paste0(bivariate_cafeh_output_dir, "cafeh_results_", trait_name, "_num_prs_components.txt")
 
 # Load in PRS scores in each tissue
-tissue_specific_prs_scores_file <- paste0(input_dir, trait_name, "_standardized_residual_prs_scores.txt")
+tissue_specific_prs_scores_file <- paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_standardized_residual_prs_scores.txt")
 tissue_specific_prs_scores <- read.table(tissue_specific_prs_scores_file, header=TRUE, sep="\t")
 scores_mat = as.matrix(tissue_specific_prs_scores[,2:(dim(tissue_specific_prs_scores)[2])])
 
@@ -333,55 +374,73 @@ scores_mat = as.matrix(tissue_specific_prs_scores[,2:(dim(tissue_specific_prs_sc
 
 
 # Load in learned weights for each tissue prs
-prs_weights_file <- paste0(input_dir, trait_name, "_prs_weights_all_samples.txt")
+prs_weights_file <- paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_prs_weights_all_samples.txt")
 prs_weights <- read.table(prs_weights_file, header=TRUE, sep="\t")
+
 
 # Compute global prs
 global_prs = (scores_mat %*% prs_weights$weight)[,1]
 
 # Loaded in R-squared results for each tissue
-relative_r_squared_file <- paste0(input_dir, trait_name, "_relative_r_squared.txt")
+relative_r_squared_file <- paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_relative_r_squared.txt")
 relative_r_squared <- read.table(relative_r_squared_file, header=TRUE, sep="\t")
 
+tissue_relative_r_squared <- relative_r_squared[1:23,]
+
+
 # Loaded in R-squared results for each tissue
-relative_pca_r_squared_file <- paste0(input_dir, trait_name, "_relative_r_squared_with_prs_pcs.txt")
+relative_pca_r_squared_file <- paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_relative_r_squared_with_prs_pcs.txt")
 relative_pca_r_squared <- read.table(relative_pca_r_squared_file, header=TRUE, sep="\t")
 
 
 # Correlation of PRS weights between studies
-corr_file <- paste0(input_dir, trait_name, "_prs_correlation_matrix.txt")
+corr_file <- paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_prs_correlation_matrix.txt")
 corr_mat <- read.table(corr_file, header=TRUE, sep="\t")
 corr_mat <- corr_mat[,2:(dim(corr_mat)[2])]
 
 # Pca loadings
-prs_pca_loadings_file = paste0(input_dir, trait_name, "_prs_pca_loadings.txt")
+prs_pca_loadings_file = paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_prs_pca_loadings.txt")
 prs_pca_loadings = read.table(prs_pca_loadings_file, header=TRUE, sep="\t")
 
 # Pca components
-prs_pca_components_file = paste0(input_dir, trait_name, "_prs_pca_principal_components.txt")
+prs_pca_components_file = paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_prs_pca_principal_components.txt")
 prs_pca_pcs = read.table(prs_pca_components_file, header=TRUE, sep="\t")
 
 # PCA VE 
-prs_pca_ve_file = paste0(input_dir, trait_name,"_prs_pca_variance_explained.txt")
+prs_pca_ve_file = paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version,"_prs_pca_variance_explained.txt")
 prs_pca_ve = read.table(prs_pca_ve_file, header=TRUE, sep="\t")
 
 # Get number of components per tissue
 tissue_df = read.table(num_components_per_tissue_file, header=TRUE, sep="\t")
+print(head(tissue_df))
 sample_size_order = order(-tissue_df$sample_size)
 num_comp_order = order(-tissue_df$num_cafeh_components)
+num_eqtl_order = order(-tissue_df$num_cafeh_eqtl_components)
 tissues_ordered_by_sample_size = as.character(tissue_df$tissue[sample_size_order])
 tissues_ordered_by_number_cafeh_components = as.character(tissue_df$tissue[num_comp_order])
+tissues_ordered_by_number_eqtl_components = as.character(tissue_df$tissue[num_eqtl_order])
+
+
+# Prs weight/num eqtl
+prs_weights_per_eqtl_comp = data.frame(prs_weights)
+prs_weights_per_eqtl_comp$weight = prs_weights_per_eqtl_comp$weight/tissue_df$num_cafeh_eqtl_components
+prs_weights_per_eqtl_comp$weight_standard_error = prs_weights_per_eqtl_comp$weight_standard_error/tissue_df$num_cafeh_eqtl_components
+
+# Relative R-squared/num eqtl
+tissue_relative_r_squared_per_eqtl_comp = data.frame(tissue_relative_r_squared)
+tissue_relative_r_squared_per_eqtl_comp$relative_r_squared = tissue_relative_r_squared_per_eqtl_comp$relative_r_squared/tissue_df$num_cafeh_eqtl_components
+tissue_relative_r_squared_per_eqtl_comp$relative_r_squared_standard_error = tissue_relative_r_squared_per_eqtl_comp$relative_r_squared_standard_error/tissue_df$num_cafeh_eqtl_components
 
 # Blood-related covariates
-blood_cov_file = paste0(input_dir, trait_name, "_blood_covariates.txt")
+blood_cov_file = paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_blood_covariates.txt")
 blood_cov = read.table(blood_cov_file, header=TRUE, sep="\t")
 
 # Trait related covariates
-trait_cov_file <- paste0(input_dir, trait_name, "_trait_covariates.txt")
+trait_cov_file <- paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_trait_covariates.txt")
 trait_cov = read.table(trait_cov_file, header=TRUE, sep="\t")
 
 # Technical covariates
-technical_cov_file <- paste0(input_dir, trait_name, "_technical_covariates.txt")
+technical_cov_file <- paste0(analyzed_ukbb_prs_dir, trait_name, "_", model_version, "_technical_covariates.txt")
 technical_cov = read.table(technical_cov_file, header=TRUE, sep="\t")
 
 
@@ -394,6 +453,23 @@ technical_cov = read.table(technical_cov_file, header=TRUE, sep="\t")
 output_file <- paste0(output_dir, "tissue_sample_size_vs_num_cafeh_components_scatter.pdf")
 scatter <- make_tissue_sample_size_num_cafeh_component_scatter(tissue_df)
 ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+###################
+# Scatter plot correlating num cafeh eqtl components with number of cafeh components identified
+###################
+output_file <- paste0(output_dir, "cafeh_eqtl_components_vs_cafeh_coloc_components_scatter.pdf")
+scatter <- make_cafeh_eqtl_component_vs_cafeh_coloc_component_scatter(tissue_df)
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+
+###################
+# Bar plot showing fraction of eqtl components that colocalize
+###################
+output_file <- paste0(output_dir, "fraction_of_eqtl_components_that_colocalize.pdf")
+bar <- make_fraction_of_eqtl_components_that_colocalize(tissue_df)
+ggsave(bar, file=output_file, width=7.2, height=6.0, units="in")
 
 
 ###################
@@ -412,14 +488,27 @@ ggsave(histo, file=paste0(output_dir, "tissue_pairwise_correlation_histogram.pdf
 ###################
 # Bar plot showing r-squared of each of prs models
 ###################
-output_file <- paste0(output_dir, "relative_r_squared_bar_plot_ordered_by_sample_size.pdf")
-ordered_studies <- c("joint_prs", tissues_ordered_by_sample_size)
+output_file <- paste0(output_dir, "relative_r_squared_bar_plot_ordered_by_num_eqtl_components.pdf")
+ordered_studies <- c("joint_prs", tissues_ordered_by_number_eqtl_components)
 barplot <- make_r_squared_bar_plot_with_standard_errors(relative_r_squared, ordered_studies)
 ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
 
 output_file <- paste0(output_dir, "relative_r_squared_bar_plot_ordered_by_number_of_cafeh_components.pdf")
 ordered_studies <- c("joint_prs", tissues_ordered_by_number_cafeh_components)
 barplot <- make_r_squared_bar_plot_with_standard_errors(relative_r_squared, ordered_studies)
+ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
+
+
+
+
+output_file <- paste0(output_dir, "relative_r_squared_bar_plot_ordered_by_num_eqtl_components_tissue_only.pdf")
+ordered_studies <- tissues_ordered_by_number_eqtl_components
+barplot <- make_r_squared_bar_plot_with_standard_errors(tissue_relative_r_squared, ordered_studies)
+ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(output_dir, "relative_r_squared_per_eqtl_component_bar_plot_ordered_by_num_eqtl_components_tissue_only.pdf")
+ordered_studies <- tissues_ordered_by_number_eqtl_components
+barplot <- make_r_squared_bar_plot_with_standard_errors(tissue_relative_r_squared_per_eqtl_comp, ordered_studies)
 ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
 
 
@@ -435,8 +524,8 @@ ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
 ###################
 # Bar plot showing prs weight bar plot
 ###################
-output_file <- paste0(output_dir, "prs_weight_bar_plot_ordered_by_sample_size.pdf")
-ordered_studies <- c(tissues_ordered_by_sample_size)
+output_file <- paste0(output_dir, "prs_weight_bar_plot_ordered_by_number_of_eqtl_components.pdf")
+ordered_studies <- c(tissues_ordered_by_number_eqtl_components)
 barplot <- make_prs_weight_bar_plot_with_standard_errors(prs_weights, ordered_studies)
 ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
 
@@ -446,6 +535,17 @@ barplot <- make_prs_weight_bar_plot_with_standard_errors(prs_weights, ordered_st
 ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
 
 
+###################
+# Bar plot showing prs weight per eqtl comp bar plot
+###################
+output_file <- paste0(output_dir, "prs_weight_per_eqtl_component_bar_plot_ordered_by_number_of_eqtl_components.pdf")
+ordered_studies <- c(tissues_ordered_by_number_eqtl_components)
+barplot <- make_prs_weight_per_eqtl_component_bar_plot_with_standard_errors(prs_weights_per_eqtl_comp, ordered_studies)
+ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
+
+
+
+if (FALSE) {
 tcsc_h2 <- data.frame(prs_weights)
 print(tcsc_h2)
 tcsc_h2$weight <- c(.019, -.004, .044, -.006, .0010, .019, .0156, .002, -.006, .034, -.008, -.005)
@@ -454,6 +554,7 @@ output_file <- paste0(output_dir, "tcsc_h2_bar_plot_ordered_by_number_of_cafeh_c
 ordered_studies <- c(tissues_ordered_by_number_cafeh_components)
 barplot <- make_prs_weight_bar_plot_with_standard_errors(tcsc_h2, ordered_studies) + labs(y="TCSC h2", x="", fill="") 
 ggsave(barplot, file=output_file, width=7.2, height=6.0, units="in")
+}
 
 ###################
 # PRS PCA principal components heatmap

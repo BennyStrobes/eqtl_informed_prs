@@ -223,8 +223,13 @@ for line in f:
 
 	# Extract relevent fields
 	gene_name = data[0]
-	print(gene_name)
 
+	# Check if gene has already been run by checking if file has been created
+	tmp_file = output_stem + gene_name + '_number_eqtl_components.txt'
+	if os.path.exists(tmp_file):
+		continue
+
+	# This gene has not been run
 	gene_chrom = data[1]
 	genotype_file = data[2]
 	zscore_file = data[3]

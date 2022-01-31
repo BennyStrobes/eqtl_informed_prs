@@ -35,7 +35,16 @@ eqtl_summary_stats_dir="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl_calli
 # Directory containing genotype reference panel data
 genotype_reference_panel_dir="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl_calling/gene_level_genotype_reference_panel/"
 
+# UKBB download data
+ukbb_download_data="/n/groups/price/UKBiobank/download_500K/"
 
+# UKBB Genotype data
+ukbb_genotype_data="/n/groups/price/UKBiobank/bgen_MAF001_500K_v3/"
+
+# UKBB Phenotype files
+ukbb_pheno_file1="/n/groups/price/steven/RareVariants/Final/UKB_new_sumstats/UKB_v3.061518.tab"
+ukbb_pheno_file2="/n/groups/price/UKBiobank/app19808mosaic/bloodQC/ukb4777.blood_v2.covars.tab"
+ukbb_pheno_file3="/n/groups/price/UKBiobank/app10438assoc/ukb4777.processed_and_post.plinkPCs.tab.gz"
 
 
 ##################
@@ -47,16 +56,35 @@ output_root="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_tissue_specific_prs/"
 # Directory containing all gtex associations (in cafeh format)
 processed_gtex_associations_dir=$output_root"processed_gtex_associations/"
 
-# Directory containing all gtex associations (in cafeh format)
+# Directory containing organized bivariate cafeh input data
 processed_bivariate_cafeh_input_dir=$output_root"processed_bivariate_cafeh_input/"
 
-# Directory containing CAFEH results
+# Directory containing bivariate CAFEH results
 bivariate_cafeh_output_dir=$output_root"bivariate_cafeh_output/"
 
+# Directory containing organized multivariate cafeh input data
+processed_multivariate_cafeh_input_dir=$output_root"processed_multivariate_cafeh_input/"
 
+# Directory containing multivariate cafeh results
+multivariate_cafeh_output_dir=$output_root"multivariate_cafeh_output/"
 
+# Directory containing filtered UKBB sample names
+ukbb_sample_names_dir=$output_root"ukbb_sample_names/"
 
+# Directory containing generated PRS
+ukbb_prs_dir=$output_root"ukbb_prs/"
 
+# Directory containing generated PRS
+ukbb_multivariate_prs_dir=$output_root"ukbb_multivariate_prs/"
+
+# Directory containing analyzed UKBB PRS results
+analyzed_ukbb_prs_dir=$output_root"analyzed_ukbb_prs/"
+
+# Directory containing analyzed UKBB PRS results
+analyzed_ukbb_multivariate_prs_dir=$output_root"analyzed_ukbb_multivariate_prs/"
+
+# Directory containing visualizations of generated
+ukbb_prs_viz_dir=$output_root"visualize_ukbb_prs/"
 
 
 
@@ -84,6 +112,17 @@ fi
 
 
 
+trait_name="blood_WHITE_COUNT"
+trait_sumstat_file=$summary_stat_dir"bolt_337K_unrelStringentBrit_MAF0.001_v3."${trait_name}".bgen.stats.gz"
+sample_size="337491"
+if false; then
+sh process_data_for_multivariate_cafeh_analysis.sh $trait_name $trait_sumstat_file $gtex_tissue_file $genotype_reference_panel_dir $processed_gtex_associations_dir $processed_multivariate_cafeh_input_dir $sample_size $cafeh_gene_list_file
+fi
+
+version="all_tissues_.95"
+if false; then
+sh run_cafeh_on_multivariate_data_for_single_trait_shell.sh $trait_name $gtex_tissue_file $processed_multivariate_cafeh_input_dir $multivariate_cafeh_output_dir $version
+fi
 
 
 
@@ -91,44 +130,6 @@ fi
 
 
 
-
-
-
-
-# CURRENTLY HACKY, switching over to o2
-
-##################
-# Input data
-##################
-# UKBB download data
-ukbb_download_data="/n/groups/price/UKBiobank/download_500K/"
-# UKBB sumstats
-ukbb_sumstats_dir="/n/groups/price/UKBiobank/sumstats/bolt_337K_unrelStringentBrit_MAF0.001_v3/"
-# Beta files
-cafeh_prs_betas_dir="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_tissue_specific_prs/input_data/"
-# File containing estimates of number of cafeh components per tissue
-num_components_per_tissue_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_tissue_specific_prs/input_data/cafeh_results_whr_adjusted_bmi_num_prs_components.txt"
-# UKBB Phenotype files
-ukbb_pheno_file1="/n/groups/price/steven/RareVariants/Final/UKB_new_sumstats/UKB_v3.061518.tab"
-ukbb_pheno_file2="/n/groups/price/UKBiobank/app19808mosaic/bloodQC/ukb4777.blood_v2.covars.tab"
-ukbb_pheno_file3="/n/groups/price/UKBiobank/app10438assoc/ukb4777.processed_and_post.plinkPCs.tab.gz"
-
-
-
-##################
-# Output data
-##################
-# Root output directory
-output_root="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_tissue_specific_prs/"
-# Directory containing filtered UKBB sample names
-ukbb_sample_names_dir=$output_root"ukbb_sample_names/"
-# Directory containing generate PRS
-ukbb_prs_dir=$output_root"ukbb_prs/old/"
-ukbb_prs_dir=$output_root"ukbb_prs/"
-# Directory containing generate PRS
-ukbb_prs_viz_dir=$output_root"visualize_ukbb_prs/"
-
-trait_name="whr_adjusted_bmi"
 
 
 
@@ -138,33 +139,45 @@ fi
 
 
 
-beta_threshold=".5"
-chrom_num="1"
 if false; then
-sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num $beta_threshold $trait_name
-fi
-
-beta_thresholds=( "1" ".5" ".1" ".05" ".01" ".005")
-beta_thresholds=(".05")
-if false; then
-for beta_threshold in "${beta_thresholds[@]}"; do	
-	for chrom_num in $(seq 1 22); do
-		sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $cafeh_prs_betas_dir $ukbb_prs_dir $chrom_num $beta_threshold $trait_name
-	done
+for chrom_num in $(seq 1 22); do
+	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $ukbb_genotype_data $bivariate_cafeh_output_dir $ukbb_prs_dir $chrom_num $trait_name $version
 done
 fi
 
 if false; then
-sh organize_prs_results.sh $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3
+sh organize_prs_results.sh $ukbb_prs_dir $trait_name $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $analyzed_ukbb_prs_dir
 fi
 
 if false; then
 module load R/3.5.1
-Rscript visualize_prs_results.R $ukbb_prs_dir $ukbb_prs_viz_dir $num_components_per_tissue_file
+model_version="beta_thresh_0.05_weighted"
+Rscript visualize_prs_results.R $trait_name $bivariate_cafeh_output_dir $ukbb_prs_dir $analyzed_ukbb_prs_dir $ukbb_prs_viz_dir $model_version
 fi
 
 
 
+
+
+
+
+if false; then
+for chrom_num in $(seq 1 22); do
+	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $ukbb_genotype_data $multivariate_cafeh_output_dir $ukbb_multivariate_prs_dir $chrom_num $trait_name $version
+done
+fi
+
+
+if false; then
+sh organize_prs_results.sh $ukbb_multivariate_prs_dir $trait_name $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $analyzed_ukbb_multivariate_prs_dir
+fi
+
+
+if false; then
+module load R/3.5.1
+model_version="beta_thresh_0.05_weighted"
+Rscript visualize_prs_results.R $trait_name $multivariate_cafeh_output_dir $ukbb_multivariate_prs_dir $analyzed_ukbb_multivariate_prs_dir $ukbb_prs_viz_dir $model_version
+fi
 
 
 

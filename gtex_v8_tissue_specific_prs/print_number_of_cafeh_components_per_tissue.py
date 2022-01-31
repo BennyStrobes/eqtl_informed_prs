@@ -11,6 +11,7 @@ import pdb
 gtex_tissue_file = sys.argv[1]
 trait_name = sys.argv[2]
 bivariate_cafeh_output_dir = sys.argv[3]
+version = sys.argv[4]
 
 
 
@@ -39,7 +40,7 @@ tissues = np.asarray(tissues)
 
 
 for chrom_num in range(1,23):
-	component_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_num_prs_components_chrom_' + str(chrom_num) + '.txt'
+	component_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + version + '_num_prs_components_chrom_' + str(chrom_num) + '.txt'
 
 	f = open(component_file)
 	head_count = 0
@@ -57,7 +58,7 @@ for chrom_num in range(1,23):
 	f.close()
 
 # print to output file
-t = open(bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_num_prs_components.txt', 'w')
+t = open(bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name+ '_' + version + '_num_prs_components.txt', 'w')
 t.write('tissue\tsample_size\tnum_cafeh_components\tnum_cafeh_eqtl_components\n')
 for tissue in tissues:
 	samp_size = tissue_to_sample_size[tissue]

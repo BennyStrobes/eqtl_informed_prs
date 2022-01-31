@@ -11,11 +11,11 @@ import statsmodels.api as sm
 from linear_regression_mixtures import LinearRegressionsMixture
 
 
-def extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name, threshold):
+def extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name, model_info):
 	head_count = 0
-	for chrom_num in range(1,23):
+	for chrom_num in range(2,23):
 		#print(chrom_num)
-		file_name = ukbb_prs_dir + trait_name + '_cafeh_prs_beta_threshold_' + threshold + '_chrom_' + str(chrom_num) + '.txt'
+		file_name = ukbb_prs_dir + trait_name + '_cafeh_prs_chrom_' + str(chrom_num) + '_' + model_info + '.txt'
 		raw_data = np.loadtxt(file_name, dtype=str,delimiter='\t')
 		tissue_names = raw_data[0,1:]
 		sample_names = raw_data[1:,0]
@@ -442,28 +442,56 @@ def learn_non_linear_prs_weights_wrapper(prs_train, pheno_train, prs_test, pheno
 
 	return predz
 
+def get_tissue_indicees(pseudotissue_file):
+	f = open(pseudotissue_file)
+	head_count = 0
+	counter = 0
+	arr = []
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			continue
+		if data[2] == 'False':
+			arr.append(counter)
+		counter = counter + 1
+	f.close()
+	return np.asarray(arr)
+
 ukbb_prs_dir = sys.argv[1]
 ukbb_pheno_file1 = sys.argv[2]
 ukbb_pheno_file2 = sys.argv[3]
 ukbb_pheno_file3 = sys.argv[4]
-thresh = sys.argv[5]
-
-
-trait_name = 'whr_adjusted_bmi'
-
-
-output_stem = ukbb_prs_dir + trait_name + '_'
+beta_thresh = sys.argv[5]
+weight_version = sys.argv[6]
+trait_name = sys.argv[7]
+analyzed_ukbb_prs_dir = sys.argv[8]
 
 
 
+model_info = 'beta_thresh_' + beta_thresh + '_' + weight_version
+
+
+output_stem = analyzed_ukbb_prs_dir + trait_name + '_' + model_info + '_' + 'top_tissue_'
+
+
+
+#pseudotissue_file='/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl_calling/pseudotissue_sample_names/pseudotissue_info.txt'
+#tissue_indices = get_tissue_indicees(pseudotissue_file)
 
 # Load in data
-prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name, thresh)
+prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name + '_top_tissue', model_info)
+
+
+#prs_names = prs_names[tissue_indices]
+#prs_mat = prs_mat[:, tissue_indices]
+
 
 
 # Extract phenotype vector
-#pheno =extract_covariates_from_cov2(ukbb_pheno_file2, sample_names, 'blood_WHITE_COUNT_v2')
-pheno =extract_covariates_from_cov1(ukbb_pheno_file1, sample_names, 'body_WHRadjBMIz')
+pheno =extract_covariates_from_cov2(ukbb_pheno_file2, sample_names, 'blood_WHITE_COUNT_v2')
+#pheno =extract_covariates_from_cov1(ukbb_pheno_file1, sample_names, 'body_WHRadjBMIz')
 
 # Remove unobserved samples with respect to phenotype of interest
 observed = ~np.isnan(pheno)
@@ -490,10 +518,10 @@ write_matrix_to_output(trait_covariates, trait_covariate_names, sample_names, ou
 
 
 # Standardize PRS Mat
-prs_mat = StandardScaler().fit_transform(prs_mat)
-write_matrix_to_output(prs_mat.astype(str), np.asarray(prs_names), sample_names, output_stem + 'standardized_prs_scores.txt')
+prs_mat_standardized = StandardScaler().fit_transform(prs_mat)
+write_matrix_to_output(prs_mat_standardized.astype(str), np.asarray(prs_names), sample_names, output_stem + 'standardized_prs_scores.txt')
 # Remove technical covariates
-residual_prs_mat = get_residuals(prs_mat, technical_cov)
+residual_prs_mat = get_residuals(prs_mat_standardized, technical_cov)
 write_matrix_to_output(residual_prs_mat.astype(str), np.asarray(prs_names), sample_names, output_stem + 'standardized_residual_prs_scores.txt')
 
 
@@ -528,12 +556,14 @@ training_indices, testing_indices = get_training_and_testing_indices(num_samples
 
 # Training data
 prs_train = prs_mat[training_indices, :]
+prs_train_standardized = prs_mat_standardized[training_indices,:]
 pheno_train = pheno[training_indices]
 cov_train = technical_cov[training_indices, :]
 pc_train = principalComponents[training_indices, :]
 
 # testing data
 prs_test = prs_mat[testing_indices, :]
+prs_test_standardized = prs_mat_standardized[testing_indices,:]
 pheno_test = pheno[testing_indices]
 cov_test = technical_cov[testing_indices, :]
 pc_test = principalComponents[testing_indices, :]
@@ -552,7 +582,7 @@ np.savetxt(corr_mat_output_file, final, fmt="%s",delimiter="\t")
 
 
 # Learn non linear prs weights
-non_linear_joint_prs = learn_non_linear_prs_weights_wrapper(prs_train, pheno_train, prs_test, pheno_test, cov_test)
+non_linear_joint_prs = learn_non_linear_prs_weights_wrapper(prs_train_standardized, pheno_train, prs_test, pheno_test, cov_test)
 
 # Fit prs weights (to training data)
 num_bootstrap_samples = 1000
@@ -577,6 +607,7 @@ for index,prs_name in enumerate(prs_names):
 t.close()
 
 
+print('done')
 
 # Relative R-squared
 num_jack_knife_samples = 200

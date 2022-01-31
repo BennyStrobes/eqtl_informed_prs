@@ -19,5 +19,5 @@ conda activate cafeh  # activate environment
 
 
 
-python3 run_cafeh_on_bivariate_data.py $gene_file $trait_name $tissue_name $bivariate_cafeh_output_dir $job_number $total_jobs
+python3 finish_running_cafeh_on_bivariate_data.py $gene_file $trait_name $tissue_name $bivariate_cafeh_output_dir $job_number $total_jobs
 
