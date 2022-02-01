@@ -473,7 +473,7 @@ analyzed_ukbb_prs_dir = sys.argv[8]
 model_info = 'beta_thresh_' + beta_thresh + '_' + weight_version
 
 
-output_stem = analyzed_ukbb_prs_dir + trait_name + '_' + model_info + '_' + 'top_tissue_'
+output_stem = analyzed_ukbb_prs_dir + trait_name + '_' + model_info + '_' + 'all_tissues_.95_'
 
 
 
@@ -481,7 +481,7 @@ output_stem = analyzed_ukbb_prs_dir + trait_name + '_' + model_info + '_' + 'top
 #tissue_indices = get_tissue_indicees(pseudotissue_file)
 
 # Load in data
-prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name + '_top_tissue', model_info)
+prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name + '_all_tissues_.95', model_info)
 
 
 #prs_names = prs_names[tissue_indices]
@@ -582,7 +582,7 @@ np.savetxt(corr_mat_output_file, final, fmt="%s",delimiter="\t")
 
 
 # Learn non linear prs weights
-non_linear_joint_prs = learn_non_linear_prs_weights_wrapper(prs_train_standardized, pheno_train, prs_test, pheno_test, cov_test)
+#non_linear_joint_prs = learn_non_linear_prs_weights_wrapper(prs_train_standardized, pheno_train, prs_test, pheno_test, cov_test)
 
 # Fit prs weights (to training data)
 num_bootstrap_samples = 1000
@@ -605,6 +605,29 @@ t.write('prs_name\tweight\tweight_standard_error\n')
 for index,prs_name in enumerate(prs_names):
 	t.write(prs_name + '\t' + str(prs_weights_all[index]) + '\t' + str(prs_weights_all_standard_errors[index]) + '\n')
 t.close()
+
+# Fit prs weights (to training data)
+num_bootstrap_samples = 1000
+num_bootstrap_samples = 100
+s_prs_weights, s_prs_weights_standard_errors = learn_prs_weights_wrapper(prs_train_standardized, pheno_train, num_bootstrap_samples)
+# Print PRS weights to output
+t = open(output_stem + 'standardized_prs_weights.txt','w')
+t.write('prs_name\tweight\tweight_standard_error\n')
+for index,prs_name in enumerate(prs_names):
+	t.write(prs_name + '\t' + str(s_prs_weights[index]) + '\t' + str(s_prs_weights_standard_errors[index]) + '\n')
+t.close()
+
+# Fit prs weights (to all samples)
+num_bootstrap_samples = 1000
+num_bootstrap_samples = 100
+s_prs_weights_all, s_prs_weights_all_standard_errors = learn_prs_weights_wrapper(prs_mat_standardized, pheno, num_bootstrap_samples)
+# Print PRS weights to output
+t = open(output_stem + 'standardized_prs_weights_all_samples.txt','w')
+t.write('prs_name\tweight\tweight_standard_error\n')
+for index,prs_name in enumerate(prs_names):
+	t.write(prs_name + '\t' + str(s_prs_weights_all[index]) + '\t' + str(s_prs_weights_all_standard_errors[index]) + '\n')
+t.close()
+
 
 
 print('done')
@@ -631,8 +654,8 @@ for index,prs_name in enumerate(prs_names):
 	t.write(prs_name + '\t' + str(relative_r_squared_arr[index]) + '\t' + str(relative_r_squared_std_err_arr[index]) + '\n')
 t.write('joint_prs\t' + str(relative_r_squared_arr[-1]) + '\t' + str(relative_r_squared_std_err_arr[-1]) + '\n')
 
-non_linear_r_squared, non_linear_r_squared_std_err = compute_relative_r_squared_wrapper(non_linear_joint_prs, pheno_test, cov_test, num_jack_knife_samples)
-t.write('non_linear_joint_prs\t' + str(non_linear_r_squared) + '\t' + str(non_linear_r_squared_std_err) + '\n')
+#non_linear_r_squared, non_linear_r_squared_std_err = compute_relative_r_squared_wrapper(non_linear_joint_prs, pheno_test, cov_test, num_jack_knife_samples)
+#t.write('non_linear_joint_prs\t' + str(non_linear_r_squared) + '\t' + str(non_linear_r_squared_std_err) + '\n')
 t.close()
 
 

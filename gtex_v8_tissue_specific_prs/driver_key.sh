@@ -158,20 +158,15 @@ fi
 
 
 
-
-
-
 if false; then
 for chrom_num in $(seq 1 22); do
 	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $ukbb_genotype_data $multivariate_cafeh_output_dir $ukbb_multivariate_prs_dir $chrom_num $trait_name $version
 done
 fi
 
-
 if false; then
 sh organize_prs_results.sh $ukbb_multivariate_prs_dir $trait_name $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $analyzed_ukbb_multivariate_prs_dir
 fi
-
 
 if false; then
 module load R/3.5.1
