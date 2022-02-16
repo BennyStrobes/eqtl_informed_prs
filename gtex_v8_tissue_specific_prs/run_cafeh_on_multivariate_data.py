@@ -7,6 +7,9 @@ import cafeh
 import pandas as pd
 from cafeh.cafeh_summary import fit_cafeh_summary, fit_cafeh_z, fit_cafeh_summary_fixed_pi, fit_cafeh_z_fixed_pi
 from cafeh.model_queries import *
+import scipy.stats
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 def filter_snps_in_g_df(df1, df2):
@@ -82,10 +85,6 @@ def print_snp_predicted_effects_for_a_gene(snp_names, ordered_tissues, pred_effe
 		t.write(snp_name + '\t' + '\t'.join(snp_predicted_effect) + '\n')
 	t.close()
 
-def print_num_eqtl_components(num_eqtl_components, num_eqtl_components_output_file):
-	t = open(num_eqtl_components_output_file,'w')
-	t.write(str(num_eqtl_components) + '\n')
-	t.close()
 
 def extract_component_predicted_effects_from_cafeh_model(cafeh_fixed_model, colocalizing_component):
 	# fixed_variant_report = summary_table(cafeh_fixed_model, filter_variants=False, min_p_active=0.0)
@@ -100,9 +99,9 @@ def extract_component_predicted_effects_from_cafeh_model(cafeh_fixed_model, colo
 	predicted_effect = tmp_pi*tmp_p_active*tmp_component_effect
 	return predicted_effect
 
-def print_num_eqtl_components(cafeh_z_model, ordered_tissues, num_eqtl_components_output_file):
+def print_num_eqtl_components(cafeh_z_model, ordered_tissues, num_eqtl_components_output_file, p_active_threshold):
 	cafeh_studies = cafeh_z_model.study_ids
-	components_per_study = np.sum(cafeh_z_model.active > .5,axis=1)
+	components_per_study = np.sum(cafeh_z_model.active > p_active_threshold,axis=1)
 	mapping = {}
 	for index, cafeh_study in enumerate(cafeh_studies):
 		mapping[cafeh_study] = components_per_study[index]
@@ -132,106 +131,119 @@ def print_num_coloc_components(colocalizing_components, ordered_tissues, num_col
 	for tissue in ordered_tissues:
 		counter = mapping[tissue]
 		t.write(tissue + '\t' + str(counter) + '\n')
-	t.close()	
+	t.close()
 
-def cafeh_wrapper_debug(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, ordered_tissues, tissue_to_position_mapping, output_stem, version):
-	# Load in pickled cafeh input data
-	g_df = pd.read_pickle(genotype_file)
-	z_df = pd.read_pickle(zscore_file)
-	n_df = pd.read_pickle(sample_size_file)
-	beta_df = pd.read_pickle(beta_file)
-	std_err_df = pd.read_pickle(std_err_file)
-
-
-	# Extract snp names
-	snp_names = np.asarray(g_df.columns)
-
-	# Quick error checking
-	if np.array_equal(g_df.columns.values, z_df.columns.values) == False:
-		print('assumption oerooror')
-		pdb.set_trace()
-	if np.array_equal(z_df.columns.values, n_df.columns.values) == False:
-		print('assumption eororor')
-		pdb.set_trace()
-
-	# Convert from genotype space to LD space
-	#g_df = g_df.astype(float)
-	LD = np.corrcoef(np.transpose(g_df))
-	LD_df = pd.DataFrame(LD, index=g_df.columns.values, columns=g_df.columns.values)
-
-	#######################
-	# Run CAFEH
-	#######################
-	cafeh_z_model = fit_cafeh_z(LD_df, z_df, n=n_df,K=10, prior_variance=10.0)
-
-
-	# get names of active cafeh trait components components
-	active_trait_components = np.where(cafeh_z_model.active[-1,:] > .95)[0]
-
-	if len(active_trait_components) > 5:
-		active_trait_components = np.asarray([])
-
-	# Get names of colocalizing (with any tissue) cafeh components
+def filter_colocalizing_components(all_colocalizing_components, p_active_threshold, method):
 	colocalizing_components = []
-	for active_trait_component in active_trait_components:
-		if np.sum(cafeh_z_model.active[:,active_trait_component] > .95) > 1:
-			tissue_indices = np.where(cafeh_z_model.active[:-1,active_trait_component] > .95)[0]
-			p_active_arr = cafeh_z_model.active[tissue_indices,active_trait_component]
-			tissue_name_arr = cafeh_z_model.study_ids[tissue_indices]
-			colocalizing_components.append((active_trait_component, p_active_arr, tissue_name_arr))
-			print(tissue_name_arr)
+	for colocalizing_component_tuple in all_colocalizing_components:
+		valid_tissues = colocalizing_component_tuple[1] > p_active_threshold
+		new_tissue_p_actives = colocalizing_component_tuple[1][valid_tissues]
+		new_tissues = colocalizing_component_tuple[2][valid_tissues]
+		if len(new_tissues) > 0 and colocalizing_component_tuple[3] > p_active_threshold:
+			if method == 'all_tissues':
+				all_tissue_component_tuple = (colocalizing_component_tuple[0], new_tissue_p_actives, new_tissues, colocalizing_component_tuple[3])
+				colocalizing_components.append(all_tissue_component_tuple)
+			elif method == 'top_tissue':
+				top_tissue_indices = np.where(new_tissue_p_actives == np.max(new_tissue_p_actives))[0]
+				top_tissue_p_actives = new_tissue_p_actives[top_tissue_indices]
+				top_tissues = new_tissues[top_tissue_indices]
+				top_tissue_component_tuple = (colocalizing_component_tuple[0], top_tissue_p_actives, top_tissues, colocalizing_component_tuple[3])
+				colocalizing_components.append(top_tissue_component_tuple)
+			else:
+				print('assumption eroror')
+				pdb.set_trace()
+	return colocalizing_components
 
-	'''
-	# Initialize matrix of predicted effects
-	pred_effects = np.zeros((len(snp_names), len(ordered_tissues)))
-	weighted_pred_effects = np.zeros((len(snp_names), len(ordered_tissues)))
+def get_snp_pos_from_snp_names(snp_names):
+	pos = []
+	for snp_name in snp_names:
+		info = snp_name.split('_')
+		pos.append(int(info[1]))
+	return np.asarray(pos)
 
-	# IF there are colocalizing snps, run cafeh again with pi's fixed using beta, std-err model
-	if len(colocalizing_components) > 0:
-		subset_n_df = n_df.iloc[-1:,:]
-		cafeh_fixed_model = fit_cafeh_summary_fixed_pi(LD_df, beta_df, std_err_df, np.copy(cafeh_z_model.pi), n=subset_n_df, K=10)
+def make_manhatten_plot_from_cafeh_z_model(cafeh_z_model, snp_names, snp_pos, trait_index, component_index, presense, figure_file):
+	z_scores = (cafeh_z_model.B)[trait_index,:]
+	lead_snp = np.argmax(cafeh_z_model.pi[component_index,:])
+	ld_with_lead_snp = cafeh_z_model.LD[lead_snp,:]
+	p_values = scipy.stats.norm.sf(abs(z_scores))*2
+	log_10_pvalue = -np.log10(p_values)
+	manhattan_df = pd.DataFrame(np.transpose((log_10_pvalue, np.square(ld_with_lead_snp),snp_pos)), columns=['-log10pvalue','R2', 'snp_pos'], index=snp_names)
 
-		# Loop through colocalizing components
-		for colocalizing_component_tuple in colocalizing_components:
-			# Get predicted trait effect from this component
-			colocalizing_component = colocalizing_component_tuple[0]
-			component_predicted_effects = extract_component_predicted_effects_from_cafeh_model(cafeh_fixed_model, colocalizing_component)
+	scatterplot = sns.scatterplot(data=manhattan_df, x="snp_pos", y="-log10pvalue", hue="R2").set_title('Component ' + str(component_index) + ' / ' + presense)
+	fig = scatterplot.get_figure()
+	fig.savefig(figure_file) 
+	plt.clf()
 
-			# Get tissues colocalizing with this component
-			colocalizing_tissues = colocalizing_component_tuple[2]
-			colocalizing_p_actives = colocalizing_component_tuple[1]
 
-			# Loop through colocalizing tissues
-			for tissue_index, colocalizing_tissue in enumerate(colocalizing_tissues):
-				colocalizing_p_active = colocalizing_p_actives[tissue_index]
-				column_index = tissue_to_position_mapping[colocalizing_tissue]
+def cafeh_wrapper_debug(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, ordered_tissues, tissue_to_position_mapping, output_stem):
+	# Load in pickled cafeh input data
+	g_df = pd.read_pickle(genotype_file)
+	z_df = pd.read_pickle(zscore_file)
+	n_df = pd.read_pickle(sample_size_file)
+	beta_df = pd.read_pickle(beta_file)
+	std_err_df = pd.read_pickle(std_err_file)
 
-				pred_effects[:, column_index] = pred_effects[:, column_index] + component_predicted_effects
-				weighted_pred_effects[:, column_index] = weighted_pred_effects[:, column_index] + (colocalizing_p_active*component_predicted_effects)
-		
-		# Save some files if we get colocalization for this gene
-		p_active_file = output_stem + gene_name + '_p_active.txt'
-		np.savetxt(p_active_file, np.hstack((np.asmatrix(cafeh_z_model.study_ids).T, cafeh_z_model.active.astype(str))), fmt="%s", delimiter='\t')
-		pi_file = output_stem + gene_name + '_pi.txt'
-		np.savetxt(pi_file, np.vstack((np.asmatrix(cafeh_z_model.snp_ids), cafeh_z_model.pi.astype(str))), fmt="%s", delimiter='\t')
+
+	# Extract snp names
+	snp_names = np.asarray(g_df.columns)
+	snp_pos = get_snp_pos_from_snp_names(snp_names)
+
+	# Quick error checking
+	if np.array_equal(g_df.columns.values, z_df.columns.values) == False:
+		print('assumption oerooror')
+		pdb.set_trace()
+	if np.array_equal(z_df.columns.values, n_df.columns.values) == False:
+		print('assumption eororor')
+		pdb.set_trace()
+
+	# Convert from genotype space to LD space
+	#g_df = g_df.astype(float)
+	LD = np.corrcoef(np.transpose(g_df))
+	LD_df = pd.DataFrame(LD, index=g_df.columns.values, columns=g_df.columns.values)
+
+	#######################
+	# Run CAFEH
+	#######################
+	cafeh_z_model = fit_cafeh_z(LD_df, z_df, n=n_df,K=10)
+	cafeh_z_model_short = fit_cafeh_z(LD_df, z_df.iloc[-1:,:], n=n_df.iloc[-1:,:], K=10)
+	#cafeh_z_model2 = fit_cafeh_z(LD_df, z_df, n=n_df,K=10)
+	p_active_thresh = .5
+
+	active = cafeh_z_model.active[-1,:]
+	active_small = cafeh_z_model_short.active[0,:]
+
+	num_active = np.sum(active > p_active_thresh)
+	num_active_small = np.sum(active_small > p_active_thresh)
 
 	
-	# print predicted effects of snps for this gene
-	snp_predicted_effects_file = output_stem + gene_name + '_predicted_effects.txt'
-	print_snp_predicted_effects_for_a_gene(snp_names, ordered_tissues, pred_effects, snp_predicted_effects_file)
-	weighted_snp_predicted_effects_file = output_stem + gene_name + '_weighted_predicted_effects.txt'
-	print_snp_predicted_effects_for_a_gene(snp_names, ordered_tissues, weighted_pred_effects, weighted_snp_predicted_effects_file)
-	
-	# print number of eqtl components for this gene
-	num_eqtl_components_output_file = output_stem + gene_name + '_number_eqtl_components.txt'
-	print_num_eqtl_components(cafeh_z_model, ordered_tissues, num_eqtl_components_output_file)
+	if num_active > 0:
+		active_components = np.where(active > .5)[0]
+		active_small_components = np.where(active_small > .5)[0]
+		presense_in_small = []
+		for active_component in active_components:
+			boolean = 'False'
+			lead_active_snp = np.argmax(cafeh_z_model.pi[active_component,:])
+			for active_small_component in active_small_components:
+				if cafeh_z_model_short.pi[active_small_component, lead_active_snp] > .02:
+					boolean = 'True'
+			presense_in_small.append(boolean)
+		presense_in_small = np.asarray(presense_in_small)
 
-	# print number of colocalizing components
-	num_coloc_components_output_file = output_stem + gene_name + '_number_coloc_components.txt'
-	print_num_coloc_components(colocalizing_components, ordered_tissues, num_coloc_components_output_file)
-	'''
+		for index, active_component in enumerate(active_components):
+			figure_file = output_stem + gene_name + '_' + str(active_component) + '_manhattan.png'
+			presense = presense_in_small[index]
 
-def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, ordered_tissues, tissue_to_position_mapping, output_stem, version):
+			make_manhatten_plot_from_cafeh_z_model(cafeh_z_model, snp_names, snp_pos, -1, active_component, presense, figure_file)
+	#num_active_comparision_file = output_stem + gene_name + '_num_active_comparison.txt'
+	#t = open(num_active_comparision_file,'w')
+	#t.write('full_cafeh_model_active\ttrait_only_cafeh_model_active\n')
+	#t.write(str(num_active) + '\t' + str(num_active_small) + '\n')
+	#t.close()
+
+
+
+
+def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, ordered_tissues, tissue_to_position_mapping, output_stem):
 	# Load in pickled cafeh input data
 	g_df = pd.read_pickle(genotype_file)
 	z_df = pd.read_pickle(zscore_file)
@@ -260,80 +272,74 @@ def cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_
 	# Run CAFEH
 	#######################
 	cafeh_z_model = fit_cafeh_z(LD_df, z_df, n=n_df,K=10, prior_variance=10.0)
-
-
-	if version.startswith('all_tissues_.'):
-		p_active_thresh = float(version.split('_')[2])
-	else:
-		p_active_thresh = .5
+	# cafeh_z_model_short = fit_cafeh_z(LD_df, z_df.iloc[-1:,:], n=n_df.iloc[-1:,:], K=10)
+	#cafeh_z_model2 = fit_cafeh_z(LD_df, z_df, n=n_df,K=10)
+	p_active_thresh = .5
 	# get names of active cafeh trait components components
 	active_trait_components = np.where(cafeh_z_model.active[-1,:] > p_active_thresh)[0]
 
 
 	# Get names of colocalizing (with any tissue) cafeh components
-	colocalizing_components = []
+	all_colocalizing_components = []
 	for active_trait_component in active_trait_components:
 		if np.sum(cafeh_z_model.active[:,active_trait_component] > p_active_thresh) > 1:
-			if version.startswith('all_tissues'):
-				tissue_indices = np.where(cafeh_z_model.active[:-1,active_trait_component] > p_active_thresh)[0]
-			elif version == 'top_tissue':
-				tissue_indices = np.asarray([np.argmax(cafeh_z_model.active[:-1,active_trait_component])])
-			else:
-				print('assumptino erroror')
-				pdb.set_trace()
+			tissue_indices = np.where(cafeh_z_model.active[:-1,active_trait_component] > p_active_thresh)[0]
 			p_active_arr = cafeh_z_model.active[tissue_indices,active_trait_component]
 			tissue_name_arr = cafeh_z_model.study_ids[tissue_indices]
-			print(tissue_name_arr)
-			colocalizing_components.append((active_trait_component, p_active_arr, tissue_name_arr))
+			all_colocalizing_components.append((active_trait_component, p_active_arr, tissue_name_arr, cafeh_z_model.active[-1,active_trait_component]))
 
 
-	# Initialize matrix of predicted effects
-	pred_effects = np.zeros((len(snp_names), len(ordered_tissues)))
-	weighted_pred_effects = np.zeros((len(snp_names), len(ordered_tissues)))
+	# Save some files for this gene on cafeh output
+	p_active_file = output_stem + gene_name + '_p_active.txt'
+	np.savetxt(p_active_file, np.hstack((np.asmatrix(cafeh_z_model.study_ids).T, cafeh_z_model.active.astype(str))), fmt="%s", delimiter='\t')
+	pi_file = output_stem + gene_name + '_pi.txt'
+	np.savetxt(pi_file, np.vstack((np.asmatrix(cafeh_z_model.snp_ids), cafeh_z_model.pi.astype(str))), fmt="%s", delimiter='\t')
+
+
+	p_active_thresholds = [.5, .7, .9, .95, .99]
+	methods = ['all_tissues', 'top_tissue']
+
+
 
 	# IF there are colocalizing snps, run cafeh again with pi's fixed using beta, std-err model
-	if len(colocalizing_components) > 0:
+	if len(all_colocalizing_components) > 0:
 		subset_n_df = n_df.iloc[-1:,:]
 		cafeh_fixed_model = fit_cafeh_summary_fixed_pi(LD_df, beta_df, std_err_df, np.copy(cafeh_z_model.pi), n=subset_n_df, K=10)
 
-		# Loop through colocalizing components
-		for colocalizing_component_tuple in colocalizing_components:
-			# Get predicted trait effect from this component
-			colocalizing_component = colocalizing_component_tuple[0]
-			component_predicted_effects = extract_component_predicted_effects_from_cafeh_model(cafeh_fixed_model, colocalizing_component)
 
-			# Get tissues colocalizing with this component
-			colocalizing_tissues = colocalizing_component_tuple[2]
-			colocalizing_p_actives = colocalizing_component_tuple[1]
+		for p_active_threshold in p_active_thresholds:
+			for method in methods:
 
-			# Loop through colocalizing tissues
-			for tissue_index, colocalizing_tissue in enumerate(colocalizing_tissues):
-				colocalizing_p_active = colocalizing_p_actives[tissue_index]
-				column_index = tissue_to_position_mapping[colocalizing_tissue]
+				# get colocalizing components specific to this version
+				colocalizing_components = filter_colocalizing_components(all_colocalizing_components, p_active_threshold, method)
 
-				pred_effects[:, column_index] = pred_effects[:, column_index] + component_predicted_effects
-				weighted_pred_effects[:, column_index] = weighted_pred_effects[:, column_index] + (colocalizing_p_active*component_predicted_effects)
-		
-		# Save some files if we get colocalization for this gene
-		p_active_file = output_stem + gene_name + '_p_active.txt'
-		np.savetxt(p_active_file, np.hstack((np.asmatrix(cafeh_z_model.study_ids).T, cafeh_z_model.active.astype(str))), fmt="%s", delimiter='\t')
-		pi_file = output_stem + gene_name + '_pi.txt'
-		np.savetxt(pi_file, np.vstack((np.asmatrix(cafeh_z_model.snp_ids), cafeh_z_model.pi.astype(str))), fmt="%s", delimiter='\t')
+				if len(colocalizing_components) == 0:
+					continue
 
-	
-	# print predicted effects of snps for this gene
-	snp_predicted_effects_file = output_stem + gene_name + '_predicted_effects.txt'
-	print_snp_predicted_effects_for_a_gene(snp_names, ordered_tissues, pred_effects, snp_predicted_effects_file)
-	weighted_snp_predicted_effects_file = output_stem + gene_name + '_weighted_predicted_effects.txt'
-	print_snp_predicted_effects_for_a_gene(snp_names, ordered_tissues, weighted_pred_effects, weighted_snp_predicted_effects_file)
-	
-	# print number of eqtl components for this gene
-	num_eqtl_components_output_file = output_stem + gene_name + '_number_eqtl_components.txt'
-	print_num_eqtl_components(cafeh_z_model, ordered_tissues, num_eqtl_components_output_file)
+				# Initialize matrix of predicted effects
+				pred_effects = np.zeros((len(snp_names), len(ordered_tissues)))
 
-	# print number of colocalizing components
-	num_coloc_components_output_file = output_stem + gene_name + '_number_coloc_components.txt'
-	print_num_coloc_components(colocalizing_components, ordered_tissues, num_coloc_components_output_file)
+				# Loop through colocalizing components
+				for colocalizing_component_tuple in colocalizing_components:
+					# Get predicted trait effect from this component
+					colocalizing_component = colocalizing_component_tuple[0]
+					component_predicted_effects = extract_component_predicted_effects_from_cafeh_model(cafeh_fixed_model, colocalizing_component)
+					pdb.set_trace()
+
+					# Get tissues colocalizing with this component
+					colocalizing_tissues = colocalizing_component_tuple[2]
+
+					# Loop through colocalizing tissues
+					for tissue_index, colocalizing_tissue in enumerate(colocalizing_tissues):
+						column_index = tissue_to_position_mapping[colocalizing_tissue]
+						pred_effects[:, column_index] = pred_effects[:, column_index] + component_predicted_effects
+
+				snp_predicted_effects_file = output_stem + method + '_' + str(p_active_threshold) + '_' + gene_name + '_predicted_effects.txt'
+				print_snp_predicted_effects_for_a_gene(snp_names, ordered_tissues, pred_effects, snp_predicted_effects_file)
+
+				# print number of colocalizing components
+				num_coloc_components_output_file = output_stem + method + '_' + str(p_active_threshold) + '_' + gene_name + '_number_coloc_components.txt'
+				print_num_coloc_components(colocalizing_components, ordered_tissues, num_coloc_components_output_file)
 
 
 
@@ -377,8 +383,8 @@ gtex_tissue_file = sys.argv[3]
 cafeh_output_dir = sys.argv[4]
 job_number = int(sys.argv[5])
 total_jobs = int(sys.argv[6])
-version = sys.argv[7]
 
+debug= 'True'
 
 print(trait_name)
 print(job_number)
@@ -393,7 +399,7 @@ num_genes = get_num_genes(gene_file)
 start_number, end_number = parallelization_start_and_end(num_genes, job_number, total_jobs)
 
 # file stem to write results to
-output_stem = cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + version + '_'
+output_stem = cafeh_output_dir + 'cafeh_results_' + trait_name + '_' 
 
 head_count = 0
 counter = -2
@@ -420,8 +426,10 @@ for line in f:
 	sample_size_file = data[4]
 	beta_file = data[5]
 	std_err_file = data[6]
-	if version != 'all_tissues_debug':
-		cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, ordered_tissues, tissue_to_position_mapping, output_stem, version)
+	if debug == 'True':
+		output_stem = cafeh_output_dir + 'cafeh_debug_results_' + trait_name + '_'
+		cafeh_wrapper_debug(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, ordered_tissues, tissue_to_position_mapping, output_stem)
 	else:
-		cafeh_wrapper_debug(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, ordered_tissues, tissue_to_position_mapping, output_stem, version)
+		cafeh_wrapper(gene_name, genotype_file, zscore_file, sample_size_file, beta_file, std_err_file, trait_name, ordered_tissues, tissue_to_position_mapping, output_stem)
+
 f.close()

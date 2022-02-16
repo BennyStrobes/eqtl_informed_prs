@@ -66,7 +66,7 @@ def get_tissue_names_from_prs_betas_file(cafeh_prs_betas_file):
 	f.close()
 	return tissue_names
 
-def create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file, beta_threshold):
+def create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file):
 	f = open(cafeh_prs_betas_file)
 	head_count = 0
 	mapping = {}
@@ -80,9 +80,9 @@ def create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file, beta_thres
 		variant_id = data[0]
 		weights = np.asarray(data[1:]).astype(float)
 		# Fillter betas
-		for index, weight in enumerate(weights):
-			if np.abs(weight) > beta_threshold:
-				weights[index] = 0.0
+		#for index, weight in enumerate(weights):
+			#if np.abs(weight) > beta_threshold:
+				#weights[index] = 0.0
 		# Done fillter betas
 		variant_info = data[0].split('_')
 		chrom_num = variant_info[0].split('hr')[1]
@@ -102,40 +102,41 @@ def create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file, beta_thres
 bgen_file = sys.argv[1]
 bgen_samples_file = sys.argv[2]
 desired_samples_file = sys.argv[3]
-cafeh_prs_betas_file = sys.argv[4] # input file
-cafeh_prs_weighted_betas_file = sys.argv[5] # input file
-ukbb_prs_file_stem = sys.argv[6] # output file
+cafeh_prs_betas_dir = sys.argv[4] # input file
+ukbb_prs_dir = sys.argv[5] # input file
+chrom = sys.argv[6]
+trait_name = sys.argv[7]
+
 
 
 # We are going create seperate prs's iterating over the following parameters
-beta_thresholds = [.05, .01, .005]
-weight_versions = ['weighted', 'unweighted']
+coloc_thresholds = [.5, .7, .9, .95, .99]
 
-beta_thresholds = [.05]
-weight_versions = ['weighted']
+methods = ['adaptive_prior_coloc', 'coloc']
+
+
 
 versions = []
 variant_to_effect_sizes_arr = []
 sizes = []
-for beta_threshold in beta_thresholds:
-	for weight_version in weight_versions:
-		versions.append((beta_threshold, weight_version, ukbb_prs_file_stem + 'beta_thresh_' + str(beta_threshold) + '_' + weight_version + '.txt'))
-		if weight_version == 'unweighted':
-			variant_to_effect_sizes = create_mapping_from_variant_to_effect_sizes(cafeh_prs_betas_file, beta_threshold)
-		elif weight_version == 'weighted':
-			variant_to_effect_sizes = create_mapping_from_variant_to_effect_sizes(cafeh_prs_weighted_betas_file, beta_threshold)
-		else:
-			print('assumption eroror')
-			pdb.set_trace()
+all_variants = {}
+for coloc_threshold in coloc_thresholds:
+	for method in methods:
+
+		prs_output_file = ukbb_prs_dir + trait_name + '_' + str(coloc_threshold) + '_' + method + '_prs_chrom_' + chrom + '.txt'
+		#prs_beta_file = cafeh_prs_betas_dir + 'cafeh_results_' + trait_name + '_' + method + '_' + str(p_active_threshold) + '_prs_beta_chrom_' + chrom + '.txt'
+		prs_beta_file = cafeh_prs_betas_dir + method + '_results_' + trait_name + '_' + str(coloc_threshold) + '_prs_beta_chrom_' + chrom + '.txt'
+		versions.append((str(coloc_threshold) + '_' + method, prs_output_file))
+		variant_to_effect_sizes = create_mapping_from_variant_to_effect_sizes(prs_beta_file)
 		sizes.append(len(variant_to_effect_sizes))
 		variant_to_effect_sizes_arr.append(variant_to_effect_sizes)
+		variants = [*variant_to_effect_sizes]
+		for variant in variants:
+			all_variants[variant] = 1
 
-if len(np.unique(sizes)) != 1:
-	print('assumption eroror')
-	pdb.set_trace()
 
 
-tissue_names = get_tissue_names_from_prs_betas_file(cafeh_prs_betas_file)
+tissue_names = get_tissue_names_from_prs_betas_file(prs_beta_file)
 
 
 sample_mapping, total_samples, num_prs_samples, prs_sample_names = create_mapping_from_full_samples_to_desired_samples(bgen_samples_file, desired_samples_file)
@@ -184,13 +185,12 @@ with BgenFile(bgen_file, delay_parsing=True) as bfile:
 		if variant_info[2] != minor_allele:
 			print('minor allele assumption erororor')
 			pdb.set_trace()
-		if variant_id not in variant_to_effect_sizes_arr[0]:
+		if variant_id not in all_variants:
 			continue
 		########################################
 		# SHOULD ONLY DO THIS STUFF IF PASS DICTI
 		###########################################
 		# convert dosage to dosage for desired samples only
-		#start_time = time.time()
 		dosage_desired_samples = dosage[sample_mapping]
 
 		dosage_desired_samples = np.reshape(dosage_desired_samples,(len(dosage_desired_samples),1))
@@ -199,15 +199,17 @@ with BgenFile(bgen_file, delay_parsing=True) as bfile:
 		used[variant_id] = 1
 		# Get prs effect sizes
 		for version_index, version in enumerate(versions):
+			if variant_id not in variant_to_effect_sizes_arr[version_index]:
+				continue
 			effect_sizes = variant_to_effect_sizes_arr[version_index][variant_id]
 			prs_mats[version_index] = prs_mats[version_index] + np.dot(dosage_desired_samples, effect_sizes)
 			#for tissue_index in range(len(tissue_names)):
 			#	prs_mats[version_index][:, tissue_index] = prs_mats[version_index][:, tissue_index] + (dosage_desired_samples*effect_sizes[tissue_index])
-		#end_time = time.time()
 
 
-variant_efficiency = len(used)/(len(variant_to_effect_sizes_arr[0])/2.0)
-print('variant efficiency: ' + str(variant_efficiency))
+if len(all_variants) > 0:
+	variant_efficiency = len(used)/(len(all_variants)/2.0)
+	print('variant efficiency: ' + str(variant_efficiency))
 
 
 header = []
@@ -221,5 +223,5 @@ for version_index, version_tuple in enumerate(versions):
 
 	final_mat = np.vstack((np.asmatrix(header), temp))
 
-	np.savetxt(version_tuple[2], final_mat, fmt="%s", delimiter='\t')
+	np.savetxt(version_tuple[1], final_mat, fmt="%s", delimiter='\t')
 

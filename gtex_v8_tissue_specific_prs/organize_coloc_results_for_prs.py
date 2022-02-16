@@ -96,14 +96,36 @@ def get_number_of_eqtls_from_p_active(p_active_file, version, eqtl_counter):
 
 	return eqtl_counter
 
-def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_file, output_file, output_file2, bivariate_cafeh_output_dir, version):
+def get_number_of_eqtls_from_coloc_pp_file(coloc_pp_file, thresh, eqtl_counter, coloc_counter):
+	f = open(coloc_pp_file)
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			continue
+		tissue = data[0]
+		pps = np.asarray(data[1:]).astype(float)
+		pph1 = pps[1]
+		pph3 = pps[3]
+		pph4 = pps[4]
+		if pph4 > thresh:
+			coloc_counter[tissue] = coloc_counter[tissue] + 1
+		if (pph4 + pph3 + pph1) > thresh:
+			eqtl_counter[tissue] = eqtl_counter[tissue] + 1
+	f.close()
+	return eqtl_counter, coloc_counter
+
+
+def make_prs_beta_file_for_single_chromosome(trait_name, chrom_num, gtex_tissues, gene_file, output_file, output_file2, bivariate_cafeh_output_dir, coloc_threshy, version):
 	num_tissues = len(gtex_tissues)
 	# Initialize dicti to map from variant id to vector of length number of tissues (only have variant id if non-zero in one tissue)
-	snp_counter = {}
 	eqtl_counter = {}
+	coloc_counter = {}
 	for tissue in gtex_tissues:
-		snp_counter[tissue] = 0
 		eqtl_counter[tissue] = 0
+		coloc_counter[tissue] = 0
 	dicti = {}
 	dicti_weighted = {}
 
@@ -115,20 +137,22 @@ def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_file,
 	# Loop through genes
 	for gene in genes:
 		# get cafeh file for each gene
-		cafeh_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name +'_' + version + '_' + gene + '_predicted_effects.txt'
-		num_coloc_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name +'_' + version + '_' + gene + '_number_coloc_components.txt'
-		p_active_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + gene + '_p_active.txt'
-		
-		eqtl_counter = get_number_of_eqtls_from_p_active(p_active_file, version, eqtl_counter)
+		if version == 'adaptive':
+			predicted_effects_file = bivariate_cafeh_output_dir + trait_name + '_' + gene + '_adaptive_coloc_' + coloc_threshy + '_predicted_effect_sizes.txt'
+			coloc_pp_file = bivariate_cafeh_output_dir + trait_name + '_' + gene + '_adaptive_coloc_' + 'posterior_probabilities.txt'
+		elif version == 'standard':
+			predicted_effects_file = bivariate_cafeh_output_dir + trait_name + '_' + gene + '_coloc_' + coloc_threshy + '_predicted_effect_sizes.txt'
+			coloc_pp_file = bivariate_cafeh_output_dir + trait_name + '_' + gene + '_coloc_' + 'posterior_probabilities.txt'			
+
+
+		eqtl_counter, coloc_counter = get_number_of_eqtls_from_coloc_pp_file(coloc_pp_file, float(coloc_threshy), eqtl_counter, coloc_counter)
 
 		# Extract number of eqtls identified by this tissue for this gene
-		if os.path.exists(cafeh_file) == False:
+		if os.path.exists(predicted_effects_file) == False:
 			continue
-		# Keep track of number of components in each tissue
-		snp_counter = get_num_eqtls(num_coloc_file, snp_counter)
 
 		# get effect sizes
-		f = open(cafeh_file)
+		f = open(predicted_effects_file)
 		head_count = 0
 		for line in f:
 			line = line.rstrip()
@@ -157,9 +181,9 @@ def make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_file,
 	t.close()
 
 	t = open(output_file2, 'w')
-	t.write('tissue_name\tnum_components\tnum_eqtl_components\n')
+	t.write('tissue_name\tnum_coloc\tnum_eqtls\n')
 	for tissue in gtex_tissues:
-		t.write(tissue + '\t' + str(snp_counter[tissue]) + '\t' + str(eqtl_counter[tissue]) + '\n')
+		t.write(tissue + '\t' + str(coloc_counter[tissue]) + '\t' + str(eqtl_counter[tissue]) + '\n')
 	t.close()
 
 
@@ -179,17 +203,19 @@ gene_file = processed_bivariate_cafeh_input_dir + trait_name + '_processed_gene_
 
 
 
-p_active_thresholds = [.5, .7, .9, .95]
-methods = ['all_tissues', 'top_tissue']
+coloc_thresholds = [.5, .7, .9, .95, .99]
 
 
-for p_active_threshold in p_active_thresholds:
-	for method in methods:
+for coloc_threshold in coloc_thresholds:
 
-		version = method + '_' + str(p_active_threshold)
-		print(version)
-		# Make PRS beta file seperately for each chromosome
-		output_file = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + version + '_prs_beta_chrom_' + str(chrom_num) + '.txt'
-		output_file2 = bivariate_cafeh_output_dir + 'cafeh_results_' + trait_name + '_' + version + '_num_prs_components_chrom_' + str(chrom_num) + '.txt'
+	# Make PRS beta file seperately for each chromosome
+	output_file = bivariate_cafeh_output_dir + 'adaptive_prior_coloc_results_' + trait_name + '_' + str(coloc_threshold) + '_prs_beta_chrom_' + str(chrom_num) + '.txt'
+	output_file2 = bivariate_cafeh_output_dir + 'adaptive_prior_coloc_results_' + trait_name + '_' + str(coloc_threshold) + '_num_prs_components_chrom_' + str(chrom_num) + '.txt'
+	make_prs_beta_file_for_single_chromosome(trait_name,chrom_num, gtex_tissues, gene_file, output_file, output_file2, bivariate_cafeh_output_dir,str(coloc_threshold), 'adaptive')
 
-		make_prs_beta_file_for_single_chromosome(chrom_num, gtex_tissues, gene_file, output_file, output_file2, bivariate_cafeh_output_dir, version)
+
+	# Make PRS beta file seperately for each chromosome
+	output_file = bivariate_cafeh_output_dir + 'coloc_results_' + trait_name + '_' + str(coloc_threshold) + '_prs_beta_chrom_' + str(chrom_num) + '.txt'
+	output_file2 = bivariate_cafeh_output_dir + 'coloc_results_' + trait_name + '_' + str(coloc_threshold) + '_num_prs_components_chrom_' + str(chrom_num) + '.txt'
+	make_prs_beta_file_for_single_chromosome(trait_name,chrom_num, gtex_tissues, gene_file, output_file, output_file2, bivariate_cafeh_output_dir,str(coloc_threshold), 'standard')
+

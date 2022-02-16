@@ -11,11 +11,11 @@ import statsmodels.api as sm
 from linear_regression_mixtures import LinearRegressionsMixture
 
 
-def extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name, model_info):
+def extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name):
 	head_count = 0
-	for chrom_num in range(2,23):
+	for chrom_num in range(1,23):
 		#print(chrom_num)
-		file_name = ukbb_prs_dir + trait_name + '_cafeh_prs_chrom_' + str(chrom_num) + '_' + model_info + '.txt'
+		file_name = ukbb_prs_dir + trait_name + '_prs_chrom_' + str(chrom_num) + '.txt'
 		raw_data = np.loadtxt(file_name, dtype=str,delimiter='\t')
 		tissue_names = raw_data[0,1:]
 		sample_names = raw_data[1:,0]
@@ -463,25 +463,23 @@ ukbb_prs_dir = sys.argv[1]
 ukbb_pheno_file1 = sys.argv[2]
 ukbb_pheno_file2 = sys.argv[3]
 ukbb_pheno_file3 = sys.argv[4]
-beta_thresh = sys.argv[5]
-weight_version = sys.argv[6]
-trait_name = sys.argv[7]
-analyzed_ukbb_prs_dir = sys.argv[8]
+coloc_threshold = sys.argv[5]
+trait_name = sys.argv[6]
+analyzed_ukbb_prs_dir = sys.argv[7]
+method = sys.argv[8]
 
 
 
-model_info = 'beta_thresh_' + beta_thresh + '_' + weight_version
 
 
-output_stem = analyzed_ukbb_prs_dir + trait_name + '_' + model_info + '_' + 'all_tissues_.95_'
-
+output_stem = analyzed_ukbb_prs_dir + trait_name + '_coloc_thresh_' + coloc_threshold + '_' + method + '_'
 
 
 #pseudotissue_file='/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl_calling/pseudotissue_sample_names/pseudotissue_info.txt'
 #tissue_indices = get_tissue_indicees(pseudotissue_file)
 
 # Load in data
-prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name + '_all_tissues_.95', model_info)
+prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name + '_' + coloc_threshold + '_' + method)
 
 
 #prs_names = prs_names[tissue_indices]
@@ -490,8 +488,8 @@ prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_d
 
 
 # Extract phenotype vector
-pheno =extract_covariates_from_cov2(ukbb_pheno_file2, sample_names, 'blood_WHITE_COUNT_v2')
-#pheno =extract_covariates_from_cov1(ukbb_pheno_file1, sample_names, 'body_WHRadjBMIz')
+#pheno =extract_covariates_from_cov2(ukbb_pheno_file2, sample_names, 'blood_WHITE_COUNT_v2')
+pheno =extract_covariates_from_cov1(ukbb_pheno_file1, sample_names, trait_name)
 
 # Remove unobserved samples with respect to phenotype of interest
 observed = ~np.isnan(pheno)

@@ -28,7 +28,7 @@ def association_file_to_bed_file(cafeh_hg38_file, temp_hg38_bed):
 		if head_count == 0:
 			head_count = head_count + 1
 			continue
-		if len(data) != 6:
+		if len(data) != 5:
 			print('assumption eroror')
 			pdb.set_trace()
 		snp_id = data[2]

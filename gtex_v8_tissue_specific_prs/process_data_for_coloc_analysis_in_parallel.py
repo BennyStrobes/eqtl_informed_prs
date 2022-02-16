@@ -320,10 +320,14 @@ def get_summary_stat_matrices(cafeh_snps, cafeh_tissues, gene_gtex_snps, gene_gt
 
 	z_score_mat = -500.0*np.ones((num_snps, (num_tissues+1)))
 	n_mat = 320.0*np.ones((num_snps, (num_tissues+1)))
+	beta_mat = -500.0*np.ones((num_snps, (num_tissues+1)))
+	std_err_mat = -500.0*np.ones((num_snps, (num_tissues+1)))
 
 	for gtex_snp_index, gtex_snp_id in enumerate(gene_gtex_snps):
 		gtex_tissue = gene_gtex_tissues[gtex_snp_index]
 		gtex_zscore = gene_gtex_zscores[gtex_snp_index]
+		gtex_beta = gene_gtex_betas[gtex_snp_index]
+		gtex_std_err = gene_gtex_std_errs[gtex_snp_index]
 
 		if gtex_snp_id not in snp_to_row_num:
 			continue
@@ -331,6 +335,8 @@ def get_summary_stat_matrices(cafeh_snps, cafeh_tissues, gene_gtex_snps, gene_gt
 			continue
 
 		z_score_mat[snp_to_row_num[gtex_snp_id], tissue_to_col_num[gtex_tissue]] = gtex_zscore
+		beta_mat[snp_to_row_num[gtex_snp_id], tissue_to_col_num[gtex_tissue]] = gtex_beta
+		std_err_mat[snp_to_row_num[gtex_snp_id], tissue_to_col_num[gtex_tissue]] = gtex_std_err
 	
 	beta_arr = []
 	std_err_arr = []
@@ -355,14 +361,16 @@ def get_summary_stat_matrices(cafeh_snps, cafeh_tissues, gene_gtex_snps, gene_gt
 
 		z_score_mat[snp_index, -1] = gwas_zscore
 		n_mat[snp_index, -1] = gwas_sample_size
-		beta_arr.append(gwas_beta)
-		std_err_arr.append(gwas_std_err)
+		beta_mat[snp_index, -1] = gwas_beta
+		std_err_mat[snp_index, -1] = gwas_std_err
+		#beta_arr.append(gwas_beta)
+		#std_err_arr.append(gwas_std_err)
 
 	# Put everything in pandas dfs
 	z_df = pd.DataFrame(np.transpose(z_score_mat), index=cafeh_studies, columns=cafeh_snps)
 	n_df = pd.DataFrame(np.transpose(n_mat.astype(int)), index=cafeh_studies, columns=cafeh_snps)
-	beta_df = pd.DataFrame(np.asmatrix(beta_arr), index=cafeh_studies[-1:], columns=cafeh_snps)
-	std_err_df = pd.DataFrame(np.asmatrix(std_err_arr), index=cafeh_studies[-1:], columns=cafeh_snps)
+	beta_df = pd.DataFrame(np.transpose(beta_mat), index=cafeh_studies, columns=cafeh_snps)
+	std_err_df = pd.DataFrame(np.transpose(std_err_mat), index=cafeh_studies, columns=cafeh_snps)
 	
 	return z_df, beta_df, std_err_df, n_df
 
@@ -371,11 +379,10 @@ trait_sumstat_file = sys.argv[2]  # Summary statistic file for gwas trait
 gtex_tissue_file = sys.argv[3]  # List of gtex tissues (and corresponding sample sizes)
 genotype_reference_panel_dir = sys.argv[4]  # Directory containing genotype of variants
 processed_gtex_associations_dir = sys.argv[5]  # Processed gtex associations (across all tissues)
-processed_multivariate_cafeh_input_dir = sys.argv[6]  # output dir
+processed_coloc_input_dir = sys.argv[6]  # output dir
 chrom_num = int(sys.argv[7])
 trait_sample_size = int(sys.argv[8])
 cafeh_gene_list_file = sys.argv[9]
-
 
 
 # Extract gtex tissue names and sample sizes from file
@@ -392,9 +399,9 @@ gwas_snp_id_to_z_score, gwas_snp_id_to_z_score_alt = create_gwas_snp_id_to_beta_
 
 
 # Create output file handle
-output_file = processed_multivariate_cafeh_input_dir + trait_name + '_chr' + str(chrom_num) + '_processed_gene_list.txt'
+output_file = processed_coloc_input_dir + trait_name + '_chr' + str(chrom_num) + '_processed_gene_list.txt'
 t = open(output_file,'w')
-t.write('gene_id\tchrom_num\tgenotype_pkl_file\tz_pkl_file\tn_pkl_file\tbeta_pkl_file\tstd_err_pkl_file\n')
+t.write('gene_id\tchrom_num\tgenotype_file\tz_file\tn_file\tbeta_file\tstd_err_file\n')
 
 
 
@@ -438,25 +445,26 @@ for gene_id in ordered_genes:
 	genotype_df = convert_genotype_file_to_hg19_and_reorder(genotype_file, hg38_to_hg19_snp_id, hg19_to_hg38_snp_id, cafeh_snps)
 
 	# Save genotype_df to pkl
-	genotype_pkl_output_file = processed_multivariate_cafeh_input_dir + trait_name + '_' + gene_id + '_genotype_df.pkl'
-	genotype_df.to_pickle(genotype_pkl_output_file)
+	genotype_pkl_output_file = processed_coloc_input_dir + trait_name + '_' + gene_id + '_genotype_df.txt'
+	genotype_df.to_csv(genotype_pkl_output_file, sep="\t")
 
 	# Get summary stats in pandas data frame format
 	z_df, beta_df, std_err_df, n_df = get_summary_stat_matrices(cafeh_snps, cafeh_tissues,  gene_gtex_snps, gene_gtex_tissues, gene_gtex_zscores, gene_gtex_betas, gene_gtex_std_errs, trait_name, gwas_snp_id_to_z_score, gwas_snp_id_to_z_score_alt)
 
 	# Save summary stats to pickles
 	# Save z_df to pkl
-	z_pkl_output_file = processed_multivariate_cafeh_input_dir + trait_name + '_' + gene_id + '_z_df.pkl'
-	z_df.to_pickle(z_pkl_output_file)
+	z_pkl_output_file = processed_coloc_input_dir + trait_name + '_' + gene_id + '_z_df.txt'
+	z_df.to_csv(z_pkl_output_file, sep="\t")
 	# Save beta_df to pkl
-	beta_pkl_output_file = processed_multivariate_cafeh_input_dir + trait_name + '_' + gene_id + '_beta_df.pkl'
-	beta_df.to_pickle(beta_pkl_output_file)
+	beta_pkl_output_file = processed_coloc_input_dir + trait_name + '_' + gene_id + '_beta_df.txt'
+	beta_df.to_csv(beta_pkl_output_file, sep="\t")
 	# Save std_err_df to pkl
-	std_err_pkl_output_file = processed_multivariate_cafeh_input_dir + trait_name + '_' + gene_id + '_std_err_df.pkl'
-	std_err_df.to_pickle(std_err_pkl_output_file)
+	std_err_pkl_output_file = processed_coloc_input_dir + trait_name + '_' + gene_id + '_std_err_df.txt'
+	std_err_df.to_csv(std_err_pkl_output_file, sep="\t")
 	# Save n_df to pkl
-	n_pkl_output_file = processed_multivariate_cafeh_input_dir + trait_name + '_' + gene_id + '_n_df.pkl'
-	n_df.to_pickle(n_pkl_output_file)
+	n_pkl_output_file = processed_coloc_input_dir + trait_name + '_' + gene_id + '_n_df.txt'
+	n_df.to_csv(n_pkl_output_file, sep="\t")
+	#  aa <- read.table("blood_WHITE_COUNT_ENSG00000142166.12_beta_df.txt",sep="\t", row.names=1, header=TRUE)
 
 	# Save locations of pickled file
 	t.write(gene_id + '\t' + str(chrom_num) + '\t' + genotype_pkl_output_file + '\t' + z_pkl_output_file + '\t' + n_pkl_output_file + '\t' + beta_pkl_output_file + '\t' + std_err_pkl_output_file + '\n')

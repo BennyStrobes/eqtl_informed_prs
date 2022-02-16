@@ -16,7 +16,6 @@ gtex_tissue_file="$6"
 genotype_reference_panel_dir="$7"
 
 source ~/.bash_profile
-
 python3 process_gtex_associations_for_cafeh_in_parallel.py $cafeh_gene_list_file $processed_gtex_associations_dir $chrom_num $eqtl_summary_stats_dir $gtex_tissue_file $genotype_reference_panel_dir
 
 

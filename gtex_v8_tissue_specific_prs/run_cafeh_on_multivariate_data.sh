@@ -11,7 +11,6 @@ gtex_tissue_file="$3"
 cafeh_output_dir="$4"
 job_number="$5"
 total_jobs="$6"
-version="$7"
 
 source ~/.bash_profile
 
@@ -23,5 +22,5 @@ echo $job_number
 
 
 
-python3 run_cafeh_on_multivariate_data.py $gene_file $trait_name $gtex_tissue_file $cafeh_output_dir $job_number $total_jobs $version
+python3 run_cafeh_on_multivariate_data.py $gene_file $trait_name $gtex_tissue_file $cafeh_output_dir $job_number $total_jobs
 

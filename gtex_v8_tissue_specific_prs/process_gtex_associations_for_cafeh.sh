@@ -16,7 +16,7 @@ genotype_reference_panel_dir="$6"
 source ~/.bash_profile
 
 
+
 for chrom_num in $(seq 1 22); do 
 	sbatch process_gtex_associations_for_cafeh_in_parallel.sh $cafeh_gene_list_file $processed_gtex_associations_dir $chrom_num $liftover_directory $eqtl_summary_stats_dir $gtex_tissue_file $genotype_reference_panel_dir
 done
-

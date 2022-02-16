@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -c 1                               # Request one core
-#SBATCH -t 0-20:00                         # Runtime in D-HH:MM format
-#SBATCH -p medium                           # Partition to run in
+#SBATCH -t 0-3:00                         # Runtime in D-HH:MM format
+#SBATCH -p short                           # Partition to run in
 #SBATCH --mem=4G                         # Memory total in MiB (for all cores)
 
 
@@ -15,31 +15,52 @@ analyzed_ukbb_prs_dir="$6"
 
 source ~/.bash_profile
 
-
-if false; then
-beta_thresh="0.05"
-weight_version="unweighted"
-python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $beta_thresh $weight_version $trait_name $analyzed_ukbb_prs_dir
-fi
-beta_thresh="0.05"
-weight_version="weighted"
-python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $beta_thresh $weight_version $trait_name $analyzed_ukbb_prs_dir
-
-if false; then
-beta_thresh="0.01"
-weight_version="unweighted"
-python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $beta_thresh $weight_version $trait_name $analyzed_ukbb_prs_dir
-
-beta_thresh="0.01"
-weight_version="weighted"
-python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $beta_thresh $weight_version $trait_name $analyzed_ukbb_prs_dir
+echo $trait_name
 
 
-beta_thresh="0.005"
-weight_version="unweighted"
-python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $beta_thresh $weight_version $trait_name $analyzed_ukbb_prs_dir
+method="coloc"
+coloc_threshold="0.5"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
 
-beta_thresh="0.005"
-weight_version="weighted"
-python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $beta_thresh $weight_version $trait_name $analyzed_ukbb_prs_dir
-fi
+method="adaptive_prior_coloc"
+coloc_threshold="0.5"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
+
+
+method="coloc"
+coloc_threshold="0.7"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
+method="adaptive_prior_coloc"
+coloc_threshold="0.7"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
+
+
+method="coloc"
+coloc_threshold="0.9"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
+method="adaptive_prior_coloc"
+coloc_threshold="0.9"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
+
+
+method="coloc"
+coloc_threshold="0.95"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
+method="adaptive_prior_coloc"
+coloc_threshold="0.95"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
+method="coloc"
+coloc_threshold="0.99"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
+method="adaptive_prior_coloc"
+coloc_threshold="0.99"
+python3 organize_prs_results.py $ukbb_prs_dir $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $coloc_threshold $trait_name $analyzed_ukbb_prs_dir $method
+
