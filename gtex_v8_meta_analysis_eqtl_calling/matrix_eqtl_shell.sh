@@ -25,7 +25,7 @@ for chrom_num in $(seq 1 22); do
 	matrix_eqtl_covariate_file=${pseudotissue_covariate_dir}${pseudotissue_name}"_covariates.txt"
 	matrix_eqtl_expression_file=${pseudotissue_expression_dir}${pseudotissue_name}"_normalized_expression_matrix_eqtl_ready_chr"${chrom_num}".txt"
 	matrix_eqtl_gene_loc_file=${pseudotissue_expression_dir}${pseudotissue_name}"_gene_location_matrix_eqtl_ready_chr"${chrom_num}".txt"
-	matrix_eqtl_genotype_file=${pseudotissue_genotype_dir}${pseudotissue_name}"_GTEx_v8_genotype_EUR_"${chrom_num}"_dosage_sample_ordered.txt"
+	matrix_eqtl_genotype_file=${pseudotissue_genotype_dir}${pseudotissue_name}"_GTEx_v8_genotype_EUR_"${chrom_num}"_dosage.txt"
 	matrix_eqtl_snp_loc_file=${pseudotissue_genotype_dir}${pseudotissue_name}"_GTEx_v8_genotype_EUR_"${chrom_num}"_snp_location.txt"
 	# Ouput file
 	output_file=${pseudotissue_eqtl_dir}${pseudotissue_name}"_chr"${chrom_num}"_matrix_eqtl_results.txt"

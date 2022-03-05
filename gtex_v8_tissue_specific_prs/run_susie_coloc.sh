@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -c 1                               # Request one core
-#SBATCH -t 0-5:00                         # Runtime in D-HH:MM format
+#SBATCH -t 0-8:00                         # Runtime in D-HH:MM format
 #SBATCH -p short                           # Partition to run in
-#SBATCH --mem=6G                         # Memory total in MiB (for all cores)
+#SBATCH --mem=10G                         # Memory total in MiB (for all cores)
 
 
 gene_file="$1"
@@ -14,9 +14,11 @@ total_jobs="$6"
 
 source ~/.bash_profile
 
+module load R/4.0.1
+
 echo $trait_name
 echo $job_number
 
 
-python3 run_competitive_coloc.py $gene_file $trait_name $gtex_tissue_file $coloc_output_dir $job_number $total_jobs
+Rscript run_susie_coloc.R $gene_file $trait_name $gtex_tissue_file $coloc_output_dir $job_number $total_jobs
 

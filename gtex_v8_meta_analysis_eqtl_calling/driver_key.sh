@@ -30,6 +30,9 @@ downsampled_tissue_info_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl
 # Downloaded from https://storage.googleapis.com/gtex_analysis_v8/reference/gencode.v26.GRCh38.genes.gtf on Jan 19 2022
 gene_annotation_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl_calling/input_data/gencode.v26.GRCh38.genes.gtf"
 
+# Genotype data from 1KG
+ref_1kg_genotype_dir="/n/groups/price/ldsc/reference_files/1000G_EUR_Phase3_hg38/plink_files/"
+
 
 ##################
 # Output data
@@ -40,6 +43,8 @@ output_root="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_meta_analysis_eqtl_ca
 pseudotissue_sample_names_dir=${output_root}"pseudotissue_sample_names/"
 # Directory containing expression file for each pseudotissue
 pseudotissue_expression_dir=${output_root}"pseudotissue_expression/"
+# Directory containing gtex snps limited to those in 1KG
+gtex_genotype_1kg_overlap_dir=${output_root}"gtex_genotype_1kg_overlap/"
 # Directory containing genotype daata
 pseudotissue_genotype_dir=${output_root}"pseudotissue_genotype/"
 # Directory containing covariate daata
@@ -48,6 +53,9 @@ pseudotissue_covariate_dir=${output_root}"pseudotissue_covariates/"
 pseudotissue_eqtl_dir=${output_root}"pseudotissue_eqtl_summary_stats/"
 # Directory containing gene level genotype reference panel
 genotype_reference_panel_dir=${output_root}"gene_level_genotype_reference_panel/"
+
+
+
 
 ##################
 # Run analysis
@@ -77,15 +85,26 @@ if false; then
 sh generate_pseudotissue_covariate_matrices.sh $tissue_info_file $pseudotissue_sample_names_dir $gtex_covariate_dir $pseudotissue_covariate_dir
 fi
 
+
+
+##################
+# Filter GTEx European genotype data to those present in 1KG
+if false; then
+sh filter_gtex_european_genotype_data_to_those_in_1kg.sh $chrom_num $gtex_genotype_dir $ref_1kg_genotype_dir $gtex_genotype_1kg_overlap_dir
+fi
+
+
 ###################
 # Generate genotype matrices for each of pseudobulk tissues
 if false; then
 sed 1d $tissue_info_file | while read tissue_name sample_size pseudotissue_name; do
 	tissue_individual_names=${pseudotissue_sample_names_dir}${tissue_name}"_individual_names_plink_ready.txt"
 	tissue_sample_names=${pseudotissue_sample_names_dir}${tissue_name}"_sample_names.txt"
-	sbatch generate_pseudotissue_genotype_matrices.sh $tissue_name $tissue_individual_names $tissue_sample_names $gtex_genotype_dir $pseudotissue_genotype_dir
+	echo $tissue_name
+	sbatch generate_pseudotissue_genotype_matrices.sh $tissue_name $tissue_individual_names $tissue_sample_names $gtex_genotype_1kg_overlap_dir $pseudotissue_genotype_dir
 done
 fi
+
 
 
 
@@ -112,7 +131,6 @@ sed 1d $pseudotissue_info_file | while read pseudotissue_name sample_size sample
 	fi
 done
 fi
-
 
 ###################
 # Generate gene level genotype reference panels

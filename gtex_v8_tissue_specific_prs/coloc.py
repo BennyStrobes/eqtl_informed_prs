@@ -63,6 +63,63 @@ def get_coloc_object(study_name, snp_names, sample_size, beta_vec, var_beta_vec)
 	dicti['var_beta'] = var_beta_vec
 	return dicti
 
+def get_causal_coloc_prob_from_pph4_vec(pph4s):
+	num_tissues = len(pph4s)
+	not_pph4s = 1.0 - pph4s
+	log_pph4s = np.log(pph4s)
+	log_not_pph4s = np.log(not_pph4s)
+	causal_prob_un_normalized_arr = []
+	for tissue_num in range(num_tissues):
+		log_prob = log_pph4s[tissue_num] + np.sum(np.delete(log_not_pph4s, tissue_num))
+		causal_prob_un_normalized_arr.append(log_prob)
+	causal_prob_un_normalized_arr = np.asarray(causal_prob_un_normalized_arr)
+
+	causal_prob = np.exp(causal_prob_un_normalized_arr - log_sum(causal_prob_un_normalized_arr))
+	return causal_prob
+
+def get_causal_coloc_prob_from_pph4_vec_with_prior(pph4s, prior):
+	num_tissues = len(pph4s)
+	not_pph4s = 1.0 - pph4s
+	log_pph4s = np.log(pph4s)
+	log_not_pph4s = np.log(not_pph4s)
+	causal_prob_un_normalized_arr = []
+	for tissue_num in range(num_tissues):
+		log_prob = log_pph4s[tissue_num] + np.sum(np.delete(log_not_pph4s, tissue_num)) + np.log(prior[tissue_num])
+		causal_prob_un_normalized_arr.append(log_prob)
+	causal_prob_un_normalized_arr = np.asarray(causal_prob_un_normalized_arr)
+
+	causal_prob = np.exp(causal_prob_un_normalized_arr - log_sum(causal_prob_un_normalized_arr))
+	return causal_prob
+
+def get_causal_coloc_prob_from_pph4_vec_v2(pph4s):
+	num_tissues = len(pph4s)
+	not_pph4s = 1.0 - pph4s
+	log_pph4s = np.log(pph4s)
+	log_not_pph4s = np.log(not_pph4s)
+	causal_prob_un_normalized_arr = []
+	for tissue_num in range(num_tissues):
+		log_prob = np.sum(np.delete(log_not_pph4s, tissue_num))
+		causal_prob_un_normalized_arr.append(log_prob)
+	causal_prob_un_normalized_arr = np.asarray(causal_prob_un_normalized_arr)
+
+	causal_prob = np.exp(causal_prob_un_normalized_arr - log_sum(causal_prob_un_normalized_arr))
+	return causal_prob
+
+def get_causal_coloc_prob_from_pph4_vec_v2_with_prior(pph4s, prior):
+	num_tissues = len(pph4s)
+	not_pph4s = 1.0 - pph4s
+	log_pph4s = np.log(pph4s)
+	log_not_pph4s = np.log(not_pph4s)
+	causal_prob_un_normalized_arr = []
+	for tissue_num in range(num_tissues):
+		log_prob = np.sum(np.delete(log_not_pph4s, tissue_num)) + np.log(prior[tissue_num])
+		causal_prob_un_normalized_arr.append(log_prob)
+	causal_prob_un_normalized_arr = np.asarray(causal_prob_un_normalized_arr)
+
+	causal_prob = np.exp(causal_prob_un_normalized_arr - log_sum(causal_prob_un_normalized_arr))
+	return causal_prob
+
+
 def meta_analysis(effects, se, method='random', weights=None):
 	# From Omer Weissbrod
 	assert method in ['fixed', 'random']

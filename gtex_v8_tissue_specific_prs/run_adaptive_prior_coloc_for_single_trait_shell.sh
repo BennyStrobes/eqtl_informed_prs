@@ -28,11 +28,12 @@ fi
 
 
 
-
+if false; then
 for chrom_num in $(seq 1 22); do
 	echo $chrom_num
 	sh organize_coloc_results_for_prs.sh $gtex_tissue_file $trait_name $coloc_input_dir $coloc_output_dir $chrom_num
 done
-
+fi
+if false; then
 python3 print_number_of_coloc_components_per_tissue.py $gtex_tissue_file $trait_name $coloc_output_dir
-
+fi

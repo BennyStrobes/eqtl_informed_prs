@@ -110,9 +110,9 @@ trait_name = sys.argv[7]
 
 
 # We are going create seperate prs's iterating over the following parameters
-coloc_thresholds = [.5, .7, .9, .95, .99]
+coloc_thresholds = [.1, .3, .5, .7, .9]
 
-methods = ['adaptive_prior_coloc', 'coloc']
+methods = ['coloc', 'causal_v1_coloc', 'causal_v2_coloc', 'mm_v1_coloc', 'mm_v2_coloc']
 
 
 
@@ -128,12 +128,12 @@ for coloc_threshold in coloc_thresholds:
 		prs_beta_file = cafeh_prs_betas_dir + method + '_results_' + trait_name + '_' + str(coloc_threshold) + '_prs_beta_chrom_' + chrom + '.txt'
 		versions.append((str(coloc_threshold) + '_' + method, prs_output_file))
 		variant_to_effect_sizes = create_mapping_from_variant_to_effect_sizes(prs_beta_file)
+		print(len(variant_to_effect_sizes))
 		sizes.append(len(variant_to_effect_sizes))
 		variant_to_effect_sizes_arr.append(variant_to_effect_sizes)
 		variants = [*variant_to_effect_sizes]
 		for variant in variants:
 			all_variants[variant] = 1
-
 
 
 tissue_names = get_tissue_names_from_prs_betas_file(prs_beta_file)

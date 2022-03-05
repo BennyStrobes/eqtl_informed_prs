@@ -46,6 +46,10 @@ ukbb_pheno_file1="/n/groups/price/steven/RareVariants/Final/UKB_new_sumstats/UKB
 ukbb_pheno_file2="/n/groups/price/UKBiobank/app19808mosaic/bloodQC/ukb4777.blood_v2.covars.tab"
 ukbb_pheno_file3="/n/groups/price/UKBiobank/app10438assoc/ukb4777.processed_and_post.plinkPCs.tab.gz"
 
+# GTEx gencode gene annotation file
+# Downloaded from https://storage.googleapis.com/gtex_analysis_v8/reference/gencode.v26.GRCh38.genes.gtf on Jan 19 2022
+gene_annotation_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl_calling/input_data/gencode.v26.GRCh38.genes.gtf"
+
 
 ##################
 # Output data
@@ -108,7 +112,36 @@ analyzed_ukbb_adaptive_prior_coloc_prs_dir=$output_root"analyzed_ukbb_adaptive_p
 
 competitive_coloc_output_dir=$output_root"competitive_coloc_output/"
 
+ukbb_competitive_coloc_prs_dir=$output_root"ukbb_competitive_coloc_prs/"
 
+analyzed_ukbb_competitive_coloc_prs_dir=$output_root"analyzed_ukbb_competitive_coloc_prs/"
+
+mm_coloc_output_dir=$output_root"mm_coloc_output/"
+
+visualize_mm_coloc_dir=$output_root"visualize_mm_coloc/"
+
+ukbb_mm_coloc_prs_dir=$output_root"ukbb_mm_coloc_prs/"
+
+analyzed_ukbb_mm_coloc_prs_dir=$output_root"analyzed_ukbb_mm_coloc_prs/"
+
+mm_unweighted_coloc_output_dir=$output_root"mm_unweighted_coloc_output/"
+
+visualize_mm_unweighted_coloc_dir=$output_root"visualize_mm_unweighted_coloc/"
+
+ukbb_mm_unweighted_coloc_prs_dir=$output_root"ukbb_mm_unweighted_coloc_prs/"
+
+analyzed_ukbb_mm_unweighted_coloc_prs_dir=$output_root"analyzed_ukbb_mm_unweighted_coloc_prs/"
+
+visualize_mm_unweighted_coloc_prs_dir=$output_root"visualize_mm_unweighted_coloc_prs/"
+
+
+susie_coloc_output_dir=$output_root"susie_coloc_output/"
+
+visualize_susie_coloc_dir=$output_root"visualize_susie_coloc/"
+
+ukbb_susie_coloc_prs_dir=$output_root"ukbb_susie_coloc_prs/"
+
+analyzed_ukbb_susie_coloc_prs_dir=$output_root"analyzed_ukbb_susie_coloc_prs/"
 
 
 ##################
@@ -280,7 +313,6 @@ for chrom_num in $(seq 1 22); do
 done
 fi
 
-#HERE
 
 
 trait_name="bp_DIASTOLICadjMEDz"
@@ -290,20 +322,12 @@ for chrom_num in $(seq 1 22); do
 done
 fi
 
-
-
 trait_name="blood_WHITE_COUNT"
 if false; then
 for chrom_num in $(seq 1 22); do
 	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $ukbb_genotype_data $adaptive_prior_coloc_output_dir $ukbb_adaptive_prior_coloc_prs_dir $chrom_num $trait_name
 done
 fi
-
-
-
-
-
-
 
 
 
@@ -339,7 +363,77 @@ fi
 ###############
 # Competitive coloc
 trait_name="blood_WHITE_COUNT"
+if false; then
 sh run_competitive_coloc_for_single_trait_shell.sh $trait_name $gtex_tissue_file $processed_coloc_input_dir $competitive_coloc_output_dir
+fi
+
+if false; then
+for chrom_num in $(seq 1 22); do
+	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $ukbb_genotype_data $competitive_coloc_output_dir $ukbb_competitive_coloc_prs_dir $chrom_num $trait_name
+done
+fi
+
+if false; then
+sh organize_prs_results.sh $ukbb_competitive_coloc_prs_dir $trait_name $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $analyzed_ukbb_competitive_coloc_prs_dir
+fi
+
+
+###############
+# mixture model (mm) coloc
+trait_name="blood_WHITE_COUNT"
+if false; then
+sh run_mm_coloc_for_single_trait_shell.sh $trait_name $gtex_tissue_file $processed_coloc_input_dir $mm_coloc_output_dir $visualize_mm_coloc_dir
+fi
+
+if false; then
+for chrom_num in $(seq 1 22); do
+	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $ukbb_genotype_data $mm_coloc_output_dir $ukbb_mm_coloc_prs_dir $chrom_num $trait_name
+done
+fi
+
+if false; then
+sh organize_prs_results.sh $ukbb_mm_coloc_prs_dir $trait_name $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $analyzed_ukbb_mm_coloc_prs_dir
+fi
+
+
+###############
+# mixture model (mm) unweighted coloc
+trait_name="blood_WHITE_COUNT"
+if false; then
+sh run_mm_unweighted_coloc_for_single_trait_shell.sh $trait_name $gtex_tissue_file $processed_coloc_input_dir $mm_unweighted_coloc_output_dir $visualize_mm_unweighted_coloc_dir $gene_annotation_file
+fi
+
+
+if false; then
+for chrom_num in $(seq 1 22); do
+	sbatch generate_prs.sh $ukbb_sample_names_dir $ukbb_download_data $ukbb_genotype_data $mm_unweighted_coloc_output_dir $ukbb_mm_unweighted_coloc_prs_dir $chrom_num $trait_name
+done
+fi
+
+if false; then
+sbatch organize_prs_results.sh $ukbb_mm_unweighted_coloc_prs_dir $trait_name $ukbb_pheno_file1 $ukbb_pheno_file2 $ukbb_pheno_file3 $analyzed_ukbb_mm_unweighted_coloc_prs_dir
+fi
+
+
+
+
+
+
+
+###############
+# SUSIE coloc
+trait_name="blood_WHITE_COUNT"
+if false; then
+sh run_susie_coloc_for_single_trait_shell.sh $trait_name $gtex_tissue_file $processed_coloc_input_dir $susie_coloc_output_dir $gene_annotation_file
+fi
+
+
+
+
+
+
+
+
 
 
 
@@ -392,10 +486,20 @@ if false; then
 Rscript visualize_prs_results_across_p_active_thresholds.R $trait_name $multivariate_cafeh_output_dir $ukbb_multivariate_prs_dir $analyzed_ukbb_multivariate_prs_dir $ukbb_prs_viz_across_thresholds_dir
 fi
 
+
+
+
+
+
+
+
+
 if false; then
+trait_name="blood_WHITE_COUNT"
+Rscript visualize_prs_results_across_p_active_thresholds.R $trait_name $mm_unweighted_coloc_output_dir $ukbb_mm_unweighted_coloc_prs_dir $analyzed_ukbb_mm_unweighted_coloc_prs_dir $visualize_mm_unweighted_coloc_prs_dir
+
 trait_name="lung_FEV1FVCzSMOKE"
 Rscript visualize_prs_results_across_p_active_thresholds.R $trait_name $adaptive_prior_coloc_output_dir $ukbb_adaptive_prior_coloc_prs_dir $analyzed_ukbb_adaptive_prior_coloc_prs_dir $ukbb_prs_viz_across_thresholds_dir
-
 
 trait_name="body_HEIGHTz"
 Rscript visualize_prs_results_across_p_active_thresholds.R $trait_name $adaptive_prior_coloc_output_dir $ukbb_adaptive_prior_coloc_prs_dir $analyzed_ukbb_adaptive_prior_coloc_prs_dir $ukbb_prs_viz_across_thresholds_dir

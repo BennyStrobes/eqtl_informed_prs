@@ -156,6 +156,9 @@ def run_coloc_for_single_gene_by_averaging_abfs(gene_name, n_file, beta_file, st
 	pph_mat = np.zeros((len(tissue_names), 6))
 	pph_mat[:,0] = 1.0
 
+	pph_mat_v2 = np.zeros((len(tissue_names), 6))
+	pph_mat_v2[:,0] = 1.0
+
 	# Keep track of log bayes output matrix
 	log_bayes_mat = np.reshape(['NULL']*(len(tissue_names)*5), (len(tissue_names), 5)).astype('U16')
 	log_bayes_mat[:,-1] = str(len(snp_names))
@@ -191,6 +194,7 @@ def run_coloc_for_single_gene_by_averaging_abfs(gene_name, n_file, beta_file, st
 		# Keep track of Coloc probabilities
 		pph_vec = coloc.run_coloc_with_precomputed_log_bayes_sums(lb_sum_h1, lb_sum_h2, lb_sum_h3, lb_sum_h4)
 		pph_mat[global_tissue_position,:-1] = pph_vec
+		pph_mat_v2[global_tissue_position,:-1] = pph_vec
 		observed_pph4s.append(pph_vec[-1])
 
 
@@ -199,8 +203,7 @@ def run_coloc_for_single_gene_by_averaging_abfs(gene_name, n_file, beta_file, st
 	
 	# Causal coloc probs
 	causal_coloc_prob = coloc.get_causal_coloc_prob_from_pph4_vec(observed_pph4s)
-
-
+	causal_coloc_prob_v2 = coloc.get_causal_coloc_prob_from_pph4_vec_v2(observed_pph4s)
 
 	## GET PREDICTED EFFECTs FOR CAUSAL COLOC
 	# Initilize output
@@ -218,12 +221,36 @@ def run_coloc_for_single_gene_by_averaging_abfs(gene_name, n_file, beta_file, st
 		for threshold_iter, coloc_threshold in enumerate(coloc_thresholds):
 			if (observed_pph4s[eqtl_study_num]*causal_coloc_prob[eqtl_study_num]) > coloc_threshold:
 				coloc_at_threshold_arr[threshold_iter] = True
-				predicted_effects_list[threshold_iter][:, global_tissue_position] = observed_pph4s[eqtl_study_num]*causal_coloc_prob[eqtl_study_num]*snp_pph4_mat[global_tissue_position,:]*trait_coloc_object['beta']
+				predicted_effects_list[threshold_iter][:, global_tissue_position] = snp_pph4_mat[global_tissue_position,:]*trait_coloc_object['beta']
 	# Save predicted effects mat
 	for threshold_iter, coloc_threshold in enumerate(coloc_thresholds):
 		if coloc_at_threshold_arr[threshold_iter]:
 			predicted_effect_size_file = coloc_output_dir + trait_name + '_' + gene_name + '_causal_coloc_' + str(coloc_threshold) + '_predicted_effect_sizes.txt'
 			write_mat_to_output_file(predicted_effects_list[threshold_iter].astype(str), snp_names, tissue_names, predicted_effect_size_file)
+
+	## GET PREDICTED EFFECTs FOR CAUSAL COLOC v2
+	# Initilize output
+	predicted_effects_list = []
+	coloc_at_threshold_arr = []
+	for coloc_threshold in coloc_thresholds:
+		coloc_thresh_mat = np.zeros((len(snp_names), len(tissue_names)))
+		predicted_effects_list.append(coloc_thresh_mat)
+		coloc_at_threshold_arr.append(False)
+	# Loop through eqtl studies
+	for eqtl_study_num, eqtl_study_name in enumerate(eqtl_studies):
+		# Global tissue position of this eqtl study
+		global_tissue_position = tissue_name_to_position[eqtl_study_name]
+		pph_mat_v2[global_tissue_position, -1] = causal_coloc_prob_v2[eqtl_study_num]
+		for threshold_iter, coloc_threshold in enumerate(coloc_thresholds):
+			if (observed_pph4s[eqtl_study_num]*causal_coloc_prob_v2[eqtl_study_num]) > coloc_threshold:
+				coloc_at_threshold_arr[threshold_iter] = True
+				predicted_effects_list[threshold_iter][:, global_tissue_position] = snp_pph4_mat[global_tissue_position,:]*trait_coloc_object['beta']
+	# Save predicted effects mat
+	for threshold_iter, coloc_threshold in enumerate(coloc_thresholds):
+		if coloc_at_threshold_arr[threshold_iter]:
+			predicted_effect_size_file = coloc_output_dir + trait_name + '_' + gene_name + '_causal_v2_coloc_' + str(coloc_threshold) + '_predicted_effect_sizes.txt'
+			write_mat_to_output_file(predicted_effects_list[threshold_iter].astype(str), snp_names, tissue_names, predicted_effect_size_file)
+
 
 	## GET PREDICTED EFFECTs FOR STANDARD COLOC
 	# Initilize output
@@ -240,7 +267,7 @@ def run_coloc_for_single_gene_by_averaging_abfs(gene_name, n_file, beta_file, st
 		for threshold_iter, coloc_threshold in enumerate(coloc_thresholds):
 			if (observed_pph4s[eqtl_study_num]) > coloc_threshold:
 				coloc_at_threshold_arr[threshold_iter] = True
-				predicted_effects_list[threshold_iter][:, global_tissue_position] = observed_pph4s[eqtl_study_num]*snp_pph4_mat[global_tissue_position,:]*trait_coloc_object['beta']
+				predicted_effects_list[threshold_iter][:, global_tissue_position] = snp_pph4_mat[global_tissue_position,:]*trait_coloc_object['beta']
 	# Save predicted effects mat
 	for threshold_iter, coloc_threshold in enumerate(coloc_thresholds):
 		if coloc_at_threshold_arr[threshold_iter]:
@@ -255,6 +282,10 @@ def run_coloc_for_single_gene_by_averaging_abfs(gene_name, n_file, beta_file, st
 	# Save pph mat
 	pph_mat_output_file = coloc_output_dir + trait_name + '_' + gene_name + '_coloc_posterior_probabilities.txt'
 	write_mat_to_output_file(pph_mat.astype(str), tissue_names, np.asarray(["PPH0", "PPH1", "PPH2", "PPH3", "PPH4", "PPHC"]), pph_mat_output_file)
+
+	# Save pph mat
+	pph_mat_output_file = coloc_output_dir + trait_name + '_' + gene_name + '_v2_coloc_posterior_probabilities.txt'
+	write_mat_to_output_file(pph_mat_v2.astype(str), tissue_names, np.asarray(["PPH0", "PPH1", "PPH2", "PPH3", "PPH4", "PPHC"]), pph_mat_output_file)
 
 
 gene_file = sys.argv[1]

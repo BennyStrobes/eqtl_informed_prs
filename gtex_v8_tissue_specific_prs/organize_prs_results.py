@@ -481,7 +481,6 @@ output_stem = analyzed_ukbb_prs_dir + trait_name + '_coloc_thresh_' + coloc_thre
 # Load in data
 prs_mat, prs_names, sample_names = extract_tissue_specific_prs_scores(ukbb_prs_dir, trait_name + '_' + coloc_threshold + '_' + method)
 
-
 #prs_names = prs_names[tissue_indices]
 #prs_mat = prs_mat[:, tissue_indices]
 

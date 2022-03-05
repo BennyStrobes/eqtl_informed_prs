@@ -18,5 +18,5 @@ echo $trait_name
 echo $job_number
 
 
-python3 run_competitive_coloc.py $gene_file $trait_name $gtex_tissue_file $coloc_output_dir $job_number $total_jobs
+python3 run_mm_unweighted_coloc_first_pass.py $gene_file $trait_name $gtex_tissue_file $coloc_output_dir $job_number $total_jobs
 

@@ -419,41 +419,18 @@ trait_name <- args[1]
 bivariate_cafeh_output_dir <- args[2]
 ukbb_prs_dir <- args[3]
 analyzed_ukbb_prs_dir <- args[4]
-output_dir <- args[5]
+output_stem <- args[5]
 
 
-method = "coloc" 
-p_active_thresholds <- c("0.5", "0.7", "0.9")
 
-output_dir <- paste0(output_dir, trait_name, "_", method, "_")
-
-
-###################################
-# Num coloc components per tissue
-###################################
-num_components_per_tissue_file <- paste0(bivariate_cafeh_output_dir, method, "_results_", trait_name, "_0.5_num_prs_components.txt")
-tissue_df = read.table(num_components_per_tissue_file, header=TRUE, sep="\t")
-abs_barplot_5 <- make_num_coloc_component_bar_plot(tissue_df, paste0(trait_name , " 0.5"))
-ratio_barplot_5 <- make_num_coloc_component_per_eqtl_component_bar_plot(tissue_df, paste0(trait_name , " 0.5"))
-
-num_components_per_tissue_file <- paste0(bivariate_cafeh_output_dir, method, "_results_", trait_name, "_0.9_num_prs_components.txt")
-tissue_df = read.table(num_components_per_tissue_file, header=TRUE, sep="\t")
-abs_barplot_9 <- make_num_coloc_component_bar_plot(tissue_df, paste0(trait_name , " 0.9"))
-ratio_barplot_9 <- make_num_coloc_component_per_eqtl_component_bar_plot(tissue_df, paste0(trait_name , " 0.9"))
-joint <- plot_grid(abs_barplot_5, ratio_barplot_5, abs_barplot_9, ratio_barplot_9, ncol=2)
-output_file <- paste0(output_dir, "joint_number_of_components.pdf")
-ggsave(joint, file=output_file, width=7.2, height=8.0, units="in")
+methods <- c("coloc", "causal_v1_coloc", "causal_v2_coloc", "mm_v1_coloc", "mm_v2_coloc")
+for (method_iter in 1:length(methods)) {
+method <- methods[method_iter]
 
 
-###################################
-# Plot learned coloc priors
-###################################
-learned_coloc_prior_file <- paste0(bivariate_cafeh_output_dir, trait_name, "_learned_coloc_priors.txt")
-coloc_prior_df <- read.table(learned_coloc_prior_file, header=FALSE, sep="\t", skip=1)
-coloc_prior_barplot <- make_learned_coloc_prior_barplot(coloc_prior_df, trait_name)
-output_file <- paste0(output_dir, "learned_coloc_prior_barplot.pdf")
-ggsave(coloc_prior_barplot, file=output_file, width=7.2, height=4.0, units="in")
+p_active_thresholds <- c("0.1", "0.3", "0.5", "0.7", "0.9")
 
+output_dir <- paste0(output_stem, trait_name, "_", method, "_")
 
 
 ####################################
@@ -473,12 +450,34 @@ for (itera in 1:length(p_active_thresholds)) {
     plot_arr[[itera]] <- barplot
   }
 }
-merged = plot_grid(plotlist=plot_arr, ncol=1, rel_heights=c(1,1,2.0))
+merged = plot_grid(plotlist=plot_arr, ncol=1, rel_heights=c(1, 1, 1,1,3.0))
 output_file <- paste0(output_dir, "prs_weights.pdf")
+ggsave(merged, file=output_file, width=7.2, height=8.0, units="in")
+
+####################################
+# Relative R-squared at various thresholds
+####################################
+plot_arr <- list()
+for (itera in 1:length(p_active_thresholds)) {
+  p_active_threshold <- p_active_thresholds[itera]
+  r_squared_file <- paste0(analyzed_ukbb_prs_dir, trait_name, "_coloc_thresh_", p_active_threshold, "_", method, "_relative_r_squared.txt")
+  r_squared_df <- read.table(r_squared_file, header=TRUE, sep="\t")
+  
+  
+  barplot <- make_r_squared_bar_plot_with_standard_errors(r_squared_df, as.character(r_squared_df$prs_name))
+  if (itera != length(p_active_thresholds)) {
+      plot_arr[[itera]] <- barplot + theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())
+  } else {
+    plot_arr[[itera]] <- barplot
+  }
+}
+merged = plot_grid(plotlist=plot_arr, ncol=1, rel_heights=c(1, 1, 1,1,3.0))
+output_file <- paste0(output_dir, "relative_r_squared_barplot.pdf")
 ggsave(merged, file=output_file, width=7.2, height=8.0, units="in")
 
 
 
+}
 
 
 
@@ -488,6 +487,20 @@ ggsave(merged, file=output_file, width=7.2, height=8.0, units="in")
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+if (FALSE) {
 
 
 
@@ -541,4 +554,88 @@ output_file <- paste0(output_dir, "prs_weights_tcsc_h2_joint_barplot.pdf")
 
 ggsave(merged, file=output_file, width=7.2, height=7.0, units="in")
 
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if (FALSE) {
+###################################
+# Num coloc components per tissue
+###################################
+num_components_per_tissue_file <- paste0(bivariate_cafeh_output_dir, method, "_results_", trait_name, "_0.5_num_prs_components.txt")
+tissue_df = read.table(num_components_per_tissue_file, header=TRUE, sep="\t")
+abs_barplot_5 <- make_num_coloc_component_bar_plot(tissue_df, paste0(trait_name , " 0.5"))
+ratio_barplot_5 <- make_num_coloc_component_per_eqtl_component_bar_plot(tissue_df, paste0(trait_name , " 0.5"))
+
+num_components_per_tissue_file <- paste0(bivariate_cafeh_output_dir, method, "_results_", trait_name, "_0.9_num_prs_components.txt")
+tissue_df = read.table(num_components_per_tissue_file, header=TRUE, sep="\t")
+abs_barplot_9 <- make_num_coloc_component_bar_plot(tissue_df, paste0(trait_name , " 0.9"))
+ratio_barplot_9 <- make_num_coloc_component_per_eqtl_component_bar_plot(tissue_df, paste0(trait_name , " 0.9"))
+joint <- plot_grid(abs_barplot_5, ratio_barplot_5, abs_barplot_9, ratio_barplot_9, ncol=2)
+output_file <- paste0(output_dir, "joint_number_of_components.pdf")
+ggsave(joint, file=output_file, width=7.2, height=8.0, units="in")
+
+
+###################################
+# Plot learned coloc priors
+###################################
+learned_coloc_prior_file <- paste0(bivariate_cafeh_output_dir, trait_name, "_learned_coloc_priors.txt")
+coloc_prior_df <- read.table(learned_coloc_prior_file, header=FALSE, sep="\t", skip=1)
+coloc_prior_barplot <- make_learned_coloc_prior_barplot(coloc_prior_df, trait_name)
+output_file <- paste0(output_dir, "learned_coloc_prior_barplot.pdf")
+ggsave(coloc_prior_barplot, file=output_file, width=7.2, height=4.0, units="in")
+
+
+}
 
