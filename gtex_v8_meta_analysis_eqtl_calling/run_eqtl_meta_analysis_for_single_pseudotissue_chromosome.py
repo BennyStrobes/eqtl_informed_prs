@@ -27,7 +27,11 @@ def create_eqtl_test_info_dictionary(composit_tissues, num_composit_tissues, pse
 			used_tests[test_name] = 0
 			beta = float(data[2])
 			t_stat = float(data[3])
-			beta_std_err = beta/t_stat
+			if t_stat == 0.0:
+				beta = 0.0
+				beta_std_err = 1.0
+			else:
+				beta_std_err = beta/t_stat
 			if test_name not in dicti:
 				dicti[test_name] = {}
 				dicti[test_name]['beta'] = []

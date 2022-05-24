@@ -37,6 +37,8 @@ for line in f:
 		flipped = False
 	else:
 		flipped = True
+		print('assumption eroror')
+		pdb.set_trace()
 
 	genotypes = data[9:]
 	if len(genotypes) != len(sample_names):
@@ -56,8 +58,8 @@ for line in f:
 		dosage = int(geno_a1) + int(geno_a2)
 		dosages.append(dosage)
 	dosages = np.asarray(dosages)
-	if flipped == True:
-		dosages = 2 - dosages
+	#if flipped == True:
+		#dosages = 2 - dosages
 	t.write(variant_id + '\t' + '\t'.join(dosages.astype(str)) + '\n')
 f.close()
 t.close()

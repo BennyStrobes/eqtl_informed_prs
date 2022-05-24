@@ -24,11 +24,11 @@ gtex_downsampled_individuals_dir="/n/groups/price/tiffany/subpheno/AllGTExTissue
 
 # File created by Tiffany containing info on downsampled tissues
 # Shared by Tiffany on slack on Jan 13, 2022
-downsampled_tissue_info_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl_calling/input_data/TissueGroups_v2.txt"
+downsampled_tissue_info_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_meta_analysis_eqtl_calling/input_data/TissueGroups_v2.txt"
 
 # GTEx gencode gene annotation file
 # Downloaded from https://storage.googleapis.com/gtex_analysis_v8/reference/gencode.v26.GRCh38.genes.gtf on Jan 19 2022
-gene_annotation_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_eqtl_calling/input_data/gencode.v26.GRCh38.genes.gtf"
+gene_annotation_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_meta_analysis_eqtl_calling/input_data/gencode.v26.GRCh38.genes.gtf"
 
 # Genotype data from 1KG
 ref_1kg_genotype_dir="/n/groups/price/ldsc/reference_files/1000G_EUR_Phase3_hg38/plink_files/"
@@ -88,7 +88,7 @@ fi
 
 
 ##################
-# Filter GTEx European genotype data to those present in 1KG
+# Filter GTEx European genotype data to those variants present in 1KG
 if false; then
 sh filter_gtex_european_genotype_data_to_those_in_1kg.sh $chrom_num $gtex_genotype_dir $ref_1kg_genotype_dir $gtex_genotype_1kg_overlap_dir
 fi
@@ -104,7 +104,6 @@ sed 1d $tissue_info_file | while read tissue_name sample_size pseudotissue_name;
 	sbatch generate_pseudotissue_genotype_matrices.sh $tissue_name $tissue_individual_names $tissue_sample_names $gtex_genotype_1kg_overlap_dir $pseudotissue_genotype_dir
 done
 fi
-
 
 
 

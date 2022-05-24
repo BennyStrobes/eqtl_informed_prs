@@ -21,6 +21,5 @@ for chrom_num in $(seq 1 22); do
 	python3 convert_1kg_bim_file_to_gtex_snp_id_format.py $ref_1kg_genotype_dir"1000G.EUR.hg38."${chrom_num}".bim" $ref_1kg_gtex_formatted_bim
 
 	echo ${gtex_genotype_dir}"GTEx_v8_genotype_EUR."${chrom_num}
-	plink --bfile ${gtex_genotype_dir}"GTEx_v8_genotype_EUR."${chrom_num} --geno 0.0 --maf .05 --extract $ref_1kg_gtex_formatted_bim --make-bed --out ${gtex_genotype_1kg_overlap_dir}"GTEx_v8_genotype_EUR_1kg_overlap_maf_05_"${chrom_num}
+	plink --bfile ${gtex_genotype_dir}"GTEx_v8_genotype_EUR."${chrom_num} --geno 0.0 --maf .05 --extract $ref_1kg_gtex_formatted_bim --keep-allele-order --make-bed --out ${gtex_genotype_1kg_overlap_dir}"GTEx_v8_genotype_EUR_1kg_overlap_maf_05_"${chrom_num}
 done
-

@@ -20,6 +20,7 @@ cis_distance="500000"
 
 
 for chrom_num in $(seq 1 22); do 
+	echo $chrom_num
 
 	# Input files
 	matrix_eqtl_covariate_file=${pseudotissue_covariate_dir}${pseudotissue_name}"_covariates.txt"
