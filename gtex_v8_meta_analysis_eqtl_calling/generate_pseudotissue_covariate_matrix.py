@@ -111,8 +111,7 @@ t.write('id\t' + '\t'.join(pseudotissue_sample_names) + '\n')
 for index, cov_identifier in enumerate(cov_identifiers):
 	arr = cov_mat[index,:]
 	if np.var(arr.astype(float)) == 0:
-		print('assumption eroror')
-		pdb.set_trace()
+		continue
 	t.write(cov_identifier + '\t' + '\t'.join(cov_mat[index,:]) + '\n')
 
 t.close()

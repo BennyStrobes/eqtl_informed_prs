@@ -16,7 +16,7 @@ def generate_tissue_info_file(downsampled_tissue_info_file, tissue_info_file):
 		if head_count == 0:
 			head_count = head_count + 1
 			continue
-		pseudotissue_name = data[2]
+		pseudotissue_name = data[3]
 		tissue_name = data[0]
 		if pseudotissue_name == 'Remove':
 			continue
@@ -30,16 +30,19 @@ def generate_pseudotissue_info_file(downsampled_tissue_info_file, pseudotissue_i
 	f = open(downsampled_tissue_info_file)
 	head_count = 0
 	dicti = {}
+	samp_size_dicti = {}
 	for line in f:
 		line = line.rstrip()
 		data = line.split('\t')
 		if head_count == 0:
 			head_count = head_count + 1
 			continue
-		pseudotissue_name = data[2]
+		pseudotissue_name = data[3]
 		tissue_name = data[0]
 		if pseudotissue_name == 'Remove':
 			continue
+		if data[2] == 'Remove':
+			samp_size_dicti[pseudotissue_name] = data[1]
 		if pseudotissue_name not in dicti:
 			dicti[pseudotissue_name] = []
 		dicti[pseudotissue_name].append(tissue_name)
@@ -52,7 +55,10 @@ def generate_pseudotissue_info_file(downsampled_tissue_info_file, pseudotissue_i
 
 	for pseudotissue in pseudotissues:
 		composit_tissues = np.sort(dicti[pseudotissue])
-		t.write(pseudotissue + '\t320\t')
+		if pseudotissue not in samp_size_dicti:
+			t.write(pseudotissue + '\t320\t')
+		else:
+			t.write(pseudotissue + '\t' + samp_size_dicti[pseudotissue] + '\t')
 		if len(composit_tissues) == 1:
 			t.write('False\t')
 		else:
@@ -60,11 +66,12 @@ def generate_pseudotissue_info_file(downsampled_tissue_info_file, pseudotissue_i
 		t.write(','.join(composit_tissues) + '\n')
 	t.close()
 
-def get_sample_names_from_composit_tissues(gtex_downsampled_individuals_dir, composit_tissues):
+def get_sample_names_from_composit_tissues(gtex_downsampled_individuals_dir, get_sample_names_from_composit_tissue, composit_tissues):
 	sample_names = []
 	indi_ids = []
 	for tissue in composit_tissues:
 		downsample_tissue_file = gtex_downsampled_individuals_dir + 'Downsampled_Individuals_320_' + tissue + '.txt'
+		pdb.set_trace()
 		f = open(downsample_tissue_file)
 		for line in f:
 			indi_id = line.rstrip()
@@ -82,10 +89,12 @@ def get_sample_names_from_composit_tissues(gtex_downsampled_individuals_dir, com
 		pdb.set_trace()
 	return sample_names, indi_ids
 
-def get_sample_names_from_composit_tissue(gtex_downsampled_individuals_dir, tissue):
+def get_sample_names_from_composit_tissue(gtex_downsampled_individuals_dir, gtex_no_downsampled_individuals_dir, tissue):
 	sample_names = []
 	indi_ids = []
 	downsample_tissue_file = gtex_downsampled_individuals_dir + 'Downsampled_Individuals_320_' + tissue + '.txt'
+	if os.path.exists(downsample_tissue_file) == False:
+		downsample_tissue_file = gtex_no_downsampled_individuals_dir + 'NoDownsample_Individuals_' + tissue + '.txt'
 	f = open(downsample_tissue_file)
 	for line in f:
 		indi_id = line.rstrip()
@@ -121,8 +130,8 @@ def print_sample_repeat_structure(individual_names, output_file):
 
 downsampled_tissue_info_file = sys.argv[1]
 gtex_downsampled_individuals_dir = sys.argv[2]
-pseudotissue_sample_names_dir = sys.argv[3]
-
+gtex_no_downsampled_individuals_dir = sys.argv[3]
+pseudotissue_sample_names_dir = sys.argv[4]
 
 
 # First generate pseudotissue info file
@@ -130,10 +139,12 @@ pseudotissue_sample_names_dir = sys.argv[3]
 pseudotissue_info_file = pseudotissue_sample_names_dir + 'pseudotissue_info.txt'
 generate_pseudotissue_info_file(downsampled_tissue_info_file, pseudotissue_info_file)
 
+
 # First generate tissue info file
 # One line for each tissue describing it and its assignment to a pseudotissue
 tissue_info_file = pseudotissue_sample_names_dir + 'tissue_info.txt'
 generate_tissue_info_file(downsampled_tissue_info_file, tissue_info_file)
+
 
 
 
@@ -150,7 +161,7 @@ for line in f:
 	tissue_name = data[0]
 
 	# Extract ordered list of sample names from this pseudotissue
-	sample_names, individual_names = get_sample_names_from_composit_tissue(gtex_downsampled_individuals_dir, tissue_name)
+	sample_names, individual_names = get_sample_names_from_composit_tissue(gtex_downsampled_individuals_dir, gtex_no_downsampled_individuals_dir, tissue_name)
 	# Print pseudotissue sample names to output file
 	print_arr_to_output(sample_names, pseudotissue_sample_names_dir + tissue_name + '_sample_names.txt')
 	print_arr_to_output(individual_names, pseudotissue_sample_names_dir + tissue_name + '_individual_names.txt')

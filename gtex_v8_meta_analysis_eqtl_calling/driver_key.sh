@@ -22,6 +22,10 @@ gtex_normalized_expression_dir="/n/groups/price/huwenbo/DATA/GTEx_v8/GTEx_Analys
 # Directory created by Tiffany.
 gtex_downsampled_individuals_dir="/n/groups/price/tiffany/subpheno/AllGTExTissues_restore/Downsampled_Ind/"
 
+# Directory containing file for each tissue (NoDownsample_Individuals_{$tissue_name}.txt) containing non-down-sampled individuals
+# Directory create by Tiffany
+gtex_no_downsampled_individuals_dir="/n/groups/price/tiffany/subpheno/AllGTExTissues_restore/NoDownsample/"
+
 # File created by Tiffany containing info on downsampled tissues
 # Shared by Tiffany on slack on Jan 13, 2022
 downsampled_tissue_info_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_meta_analysis_eqtl_calling/input_data/TissueGroups_v2.txt"
@@ -64,7 +68,7 @@ genotype_reference_panel_dir=${output_root}"gene_level_genotype_reference_panel/
 ###################
 # create ordered list of samples for each of the pseudotissues
 if false; then
-sh generate_pseudotissue_sample_names.sh $downsampled_tissue_info_file $gtex_downsampled_individuals_dir $pseudotissue_sample_names_dir
+sh generate_pseudotissue_sample_names.sh $downsampled_tissue_info_file $gtex_downsampled_individuals_dir $gtex_no_downsampled_individuals_dir $pseudotissue_sample_names_dir
 fi
 
 ###################
@@ -75,7 +79,7 @@ pseudotissue_info_file=${pseudotissue_sample_names_dir}"pseudotissue_info.txt"
 ###################
 # Generate expression matrices for each of pseudobulk tissues
 if false; then
-sh generate_pseudotissue_expression_matrices.sh $tissue_info_file $pseudotissue_sample_names_dir $gtex_normalized_expression_dir $gene_annotation_file $pseudotissue_expression_dir
+sbatch generate_pseudotissue_expression_matrices.sh $tissue_info_file $pseudotissue_sample_names_dir $gtex_normalized_expression_dir $gene_annotation_file $pseudotissue_expression_dir
 fi
 
 
@@ -109,14 +113,14 @@ fi
 
 
 
+
 ###################
 # Run matrix eQTL (in each pseudotissue)
 # loop through pseudotissues here
-if false; then
 sed 1d $tissue_info_file | while read tissue_name sample_size pseudotissue_name; do
-	sbatch matrix_eqtl_shell.sh $tissue_name $pseudotissue_expression_dir $pseudotissue_genotype_dir $pseudotissue_covariate_dir $pseudotissue_eqtl_dir
+	sh matrix_eqtl_shell.sh $tissue_name $pseudotissue_expression_dir $pseudotissue_genotype_dir $pseudotissue_covariate_dir $pseudotissue_eqtl_dir
 done
-fi
+
 
 
 
