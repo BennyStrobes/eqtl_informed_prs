@@ -117,10 +117,11 @@ fi
 ###################
 # Run matrix eQTL (in each pseudotissue)
 # loop through pseudotissues here
+if false; then
 sed 1d $tissue_info_file | while read tissue_name sample_size pseudotissue_name; do
-	sh matrix_eqtl_shell.sh $tissue_name $pseudotissue_expression_dir $pseudotissue_genotype_dir $pseudotissue_covariate_dir $pseudotissue_eqtl_dir
+	sbatch matrix_eqtl_shell.sh $tissue_name $pseudotissue_expression_dir $pseudotissue_genotype_dir $pseudotissue_covariate_dir $pseudotissue_eqtl_dir
 done
-
+fi
 
 
 
