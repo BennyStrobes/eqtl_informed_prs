@@ -22,9 +22,6 @@ gtex_normalized_expression_dir="/n/groups/price/huwenbo/DATA/GTEx_v8/GTEx_Analys
 # Directory created by Tiffany.
 gtex_downsampled_individuals_dir="/n/groups/price/tiffany/subpheno/AllGTExTissues_restore/Downsampled_Ind/"
 
-# Directory containing file for each tissue (NoDownsample_Individuals_{$tissue_name}.txt) containing non-down-sampled individuals
-# Directory create by Tiffany
-gtex_no_downsampled_individuals_dir="/n/groups/price/tiffany/subpheno/AllGTExTissues_restore/NoDownsample/"
 
 # File created by Tiffany containing info on downsampled tissues
 # Shared by Tiffany on slack on Jan 13, 2022
@@ -37,6 +34,9 @@ gene_annotation_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_meta_analysi
 # Genotype data from 1KG
 ref_1kg_genotype_dir="/n/groups/price/ldsc/reference_files/1000G_EUR_Phase3_hg38/plink_files/"
 
+# File containing european ancestry gtex individuals
+gtex_eur_individuals_file="/n/groups/price/huwenbo/DATA/GTEx_v8/GTEx_v8_genotypes_EUR/GTEx_v8_genotype_EUR.7.fam"
+
 
 ##################
 # Output data
@@ -48,7 +48,7 @@ pseudotissue_sample_names_dir=${output_root}"pseudotissue_sample_names/"
 # Directory containing expression file for each pseudotissue
 pseudotissue_expression_dir=${output_root}"pseudotissue_expression/"
 # Directory containing gtex snps limited to those in 1KG
-gtex_genotype_1kg_overlap_dir=${output_root}"gtex_genotype_1kg_overlap/"
+gtex_processed_genotype_dir=${output_root}"gtex_processed_genotype/"
 # Directory containing genotype daata
 pseudotissue_genotype_dir=${output_root}"pseudotissue_genotype/"
 # Directory containing covariate daata
@@ -68,7 +68,7 @@ genotype_reference_panel_dir=${output_root}"gene_level_genotype_reference_panel/
 ###################
 # create ordered list of samples for each of the pseudotissues
 if false; then
-sh generate_pseudotissue_sample_names.sh $downsampled_tissue_info_file $gtex_downsampled_individuals_dir $gtex_no_downsampled_individuals_dir $pseudotissue_sample_names_dir
+sh generate_pseudotissue_sample_names.sh $downsampled_tissue_info_file $gtex_downsampled_individuals_dir $gtex_covariate_dir $pseudotissue_sample_names_dir $gtex_eur_individuals_file
 fi
 
 ###################
@@ -94,7 +94,7 @@ fi
 ##################
 # Filter GTEx European genotype data to those variants present in 1KG
 if false; then
-sh filter_gtex_european_genotype_data_to_those_in_1kg.sh $chrom_num $gtex_genotype_dir $ref_1kg_genotype_dir $gtex_genotype_1kg_overlap_dir
+sh filter_gtex_european_genotype_data.sh $gtex_genotype_dir $gtex_processed_genotype_dir
 fi
 
 
@@ -105,12 +105,9 @@ sed 1d $tissue_info_file | while read tissue_name sample_size pseudotissue_name;
 	tissue_individual_names=${pseudotissue_sample_names_dir}${tissue_name}"_individual_names_plink_ready.txt"
 	tissue_sample_names=${pseudotissue_sample_names_dir}${tissue_name}"_sample_names.txt"
 	echo $tissue_name
-	sbatch generate_pseudotissue_genotype_matrices.sh $tissue_name $tissue_individual_names $tissue_sample_names $gtex_genotype_1kg_overlap_dir $pseudotissue_genotype_dir
+	sbatch generate_pseudotissue_genotype_matrices.sh $tissue_name $tissue_individual_names $tissue_sample_names $gtex_processed_genotype_dir $pseudotissue_genotype_dir
 done
 fi
-
-
-
 
 
 

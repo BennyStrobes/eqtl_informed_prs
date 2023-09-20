@@ -23,6 +23,8 @@ for line in f:
 		head_count = head_count + 1
 		continue
 	line_af = float(data[4])
+	if line_af > .5:
+		line_af = 1.0 - line_af
 	if line_af < min_af:
 		min_af = line_af
 

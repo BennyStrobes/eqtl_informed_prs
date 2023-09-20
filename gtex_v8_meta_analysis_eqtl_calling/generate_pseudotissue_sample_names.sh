@@ -9,9 +9,10 @@ source ~/.bash_profile
 
 downsampled_tissue_info_file="$1"
 gtex_downsampled_individuals_dir="$2"
-gtex_no_downsampled_individuals_dir="$3"
+gtex_covariate_dir="$3"
 pseudotissue_sample_names_dir="$4"
+gtex_eur_individuals_file="$5"
 
 
 
-python3 generate_pseudotissue_sample_names.py $downsampled_tissue_info_file $gtex_downsampled_individuals_dir $gtex_no_downsampled_individuals_dir $pseudotissue_sample_names_dir
+python3 generate_pseudotissue_sample_names.py $downsampled_tissue_info_file $gtex_downsampled_individuals_dir $gtex_covariate_dir $pseudotissue_sample_names_dir $gtex_eur_individuals_file

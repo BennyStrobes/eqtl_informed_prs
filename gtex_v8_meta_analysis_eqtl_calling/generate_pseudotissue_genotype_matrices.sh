@@ -14,10 +14,13 @@ pseudotissue_genotype_dir="$5"
 
 echo $pseudotissue_name
 
+
+
+
 for chrom_num in $(seq 1 22); do 
 	echo $chrom_num
 	# Filter to individuals in this tissue (and re-order columns so they line up with order of expression data)
-	plink --bfile ${gtex_genotype_dir}"GTEx_v8_genotype_EUR_1kg_overlap_maf_05_"${chrom_num} --keep-allele-order --keep ${pseudotissue_individual_names} --indiv-sort f ${pseudotissue_individual_names} --make-bed --out ${pseudotissue_genotype_dir}${pseudotissue_name}"_GTEx_v8_genotype_EUR_"${chrom_num}
+	plink --bfile ${gtex_genotype_dir}"GTEx_v8_genotype_EUR_maf_05_"${chrom_num} --keep-allele-order --keep ${pseudotissue_individual_names} --indiv-sort f ${pseudotissue_individual_names} --make-bed --out ${pseudotissue_genotype_dir}${pseudotissue_name}"_GTEx_v8_genotype_EUR_"${chrom_num}
 	
 	# Get Allele frequency of the snps in this tissue
 	plink --bfile ${pseudotissue_genotype_dir}${pseudotissue_name}"_GTEx_v8_genotype_EUR_"${chrom_num} --keep-allele-order --freq --out ${pseudotissue_genotype_dir}${pseudotissue_name}"_GTEx_v8_genotype_EUR_"${chrom_num}
